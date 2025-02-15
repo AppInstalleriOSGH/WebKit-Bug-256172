@@ -10,9 +10,7 @@
     <script type="text/javascript" src="stage1.js"></script>
     <script type="text/javascript" src="pwn.js"></script>
     <script>
-        var loc = window.location;
-        var wsProtocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-        var wsURL = wsProtocol + '//' + loc.host + '/WebSocket';
+        var wsURL = "ws://192.168.3.69:8080/ws";
         try {
             var ws = new WebSocket(wsURL);
             ws.onopen = function() {

