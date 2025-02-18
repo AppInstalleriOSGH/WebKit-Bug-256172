@@ -93,6 +93,8 @@ int main(void) {
     if (fd == -1) {
         crash(500);
     }
+    dup2(fd, STDOUT_FILENO);
+    dup2(fd, STDERR_FILENO);
     size_t size = write(fd, helloWorld, strlen(helloWorld));
     sleep(60);
     crash(fd);

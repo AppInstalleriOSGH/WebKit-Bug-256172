@@ -30,6 +30,7 @@ typedef int (*open_func)(const char*, int, ...);
 typedef char* (*getenv_func)(const char*);
 typedef void (*abort_func)(void);
 typedef size_t (*write_func)(int, const void*, size_t);
+typedef int (*dup2_func)(int, int);
 
 asl_log_func asl_log_ptr;
 sleep_func sleep_ptr;
@@ -41,6 +42,7 @@ open_func open_ptr;
 getenv_func getenv_ptr;
 abort_func abort_ptr;
 write_func write_ptr;
+dup2_func dup2_ptr;
 
 #define asl_log(level, domain, format, ...) asl_log_ptr(level, domain, format, ##__VA_ARGS__)
 #define sleep(seconds) sleep_ptr(seconds)
@@ -52,3 +54,4 @@ write_func write_ptr;
 #define getenv(name) getenv_ptr(name)
 #define abort() abort_ptr()
 #define write(fd, buf, count) write_ptr(fd, buf, count)
+#define dup2(oldfd, newfd) dup2_ptr(oldfd, newfd)

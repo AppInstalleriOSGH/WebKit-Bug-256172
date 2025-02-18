@@ -134,6 +134,7 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     uint64_t getenv_addr = libsystem_cBase + 0x7b14;
     uint64_t abort_addr = libsystem_cBase + 0x1f630;
     uint64_t write_addr = libsystem_kernelBase + 0x231c;
+    uint64_t dup2_addr = libsystem_kernelBase + 0xb3b8;
     
     // Sets the function pointers
     asl_log_ptr = (asl_log_func)asl_log_addr;
@@ -146,4 +147,5 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     getenv_ptr = (getenv_func)getenv_addr;
     abort_ptr = (abort_func)abort_addr;
     write_ptr = (write_func)write_addr;
+    dup2_ptr = (dup2_func)dup2_addr;
 }
