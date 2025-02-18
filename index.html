@@ -33,9 +33,11 @@
             return true;
         }
         if ('InvalidStateError' == error.name) {
-            location.reload();
+            log(error.name);
+            //location.reload();
         } else if ('TypeError' == error.name) {
-            location.reload();
+            log(error.name);
+            //location.reload();
         } else {
             document.getElementById("log").innerHTML += "<h1 style='color:red'>"+message+" @ "+lineno+"</h1>";
             try {

@@ -1,11 +1,14 @@
 
-SCFLAGS = -arch arm64 -Wall -Wno-error=incompatible-function-pointer-types -Wno-error=int-conversion -c -Os -fno-stack-protector -mno-sse -fno-unwind-tables -fno-exceptions 
+SCFLAGS = -arch arm64 -Wall -Wno-error=incompatible-function-pointer-types -Wno-error=int-conversion -c -Os -fno-stack-protector -fno-unwind-tables -fno-exceptions
 
 all:
-	xcrun -sdk iphoneos clang stage1.S -o stage1.o $(SCFLAGS)
-	xcrun -sdk iphoneos clang stage1-c.c -o stage1-c.o $(SCFLAGS)
-	xcrun -sdk iphoneos ld stage1.o stage1-c.o -o stage1 -dylib -lSystem -syslibroot $(shell xcrun --sdk iphoneos --show-sdk-path)
-	/opt/homebrew/Cellar/binutils/2.44/bin/gobjcopy -O binary -j .text stage1 stage1.bin
+	@xcrun -sdk iphoneos clang utils.S -o utils.o $(SCFLAGS)
+	@xcrun -sdk iphoneos clang dyld.c -o dyld.o $(SCFLAGS)
+	@xcrun -sdk iphoneos clang main.c -o main.o $(SCFLAGS)
+	@xcrun -sdk iphoneos ld utils.o main.o dyld.o -o stage1 -dylib -lSystem -syslibroot $(shell xcrun --sdk iphoneos --show-sdk-path)
+	@objcopy -O binary -j .text stage1 stage1.bin
+	@rm -f stage1 utils.o main.o dyld.o
+	@python3 build.py
 
 clean:
-	rm -f stage1 stage1.o stage1.bin
+	@rm -f stage1 utils.o main.o dyld.o stage1.bin stage1.js ../stage1.js

