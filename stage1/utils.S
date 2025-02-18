@@ -1,8 +1,8 @@
 .align 4
-.global _start, _getPrevFP, _crash, _malloc_test
+.global _start, _getPrevFP, _crash
 
 _start:
-    b _c_start
+    b _main
     ret
 
 _getPrevFP:
@@ -23,21 +23,9 @@ _crash:
     mov x10, 0x4141
     mov x11, 0x4141
     mov x13, 0x0
-
     mov x16, 20
     svc 0
     mov x1, 6
     mov x16, 37
-    svc 0
-    ret
-
-_malloc_test:
-    mov x1, x0
-    mov x0, 0
-    mov x2, 3
-    mov x3, 4098
-    mov x4, -1
-    mov x5, 0
-    mov x16, 197
     svc 0
     ret

