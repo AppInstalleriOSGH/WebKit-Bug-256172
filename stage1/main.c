@@ -17,6 +17,13 @@ char* combineStrings(char* str1, char* str2) {
     return combined;
 }
 
+char* newLine;
+
+void print(char* message) {
+    write(STDOUT_FILENO, message, strlen(message));
+    write(STDOUT_FILENO, newLine, 1);
+}
+
 int main(void) {
     uint64_t dyldBase = getDYLDBase();
     uint64_t dyldAllImageInfoAddr = getDYLDAllImageInfoAddr(dyldBase);
@@ -32,8 +39,8 @@ int main(void) {
         (homeString + 0)[i] = homeString_0[i];
     }
     
-    // "/Library/Caches/com.apple.WebKit.WebContent/AAAAAA"
-    char* relativePath = malloc(51);
+    // "/Library/Caches/com.apple.WebKit.WebContent/log.txt"
+    char* relativePath = malloc_ptr(52);
     static GLOB char relativePath_0[] = {0x2f, 0x4c, 0x69, 0x62, 0x72, 0x61};
     static GLOB char relativePath_1[] = {0x72, 0x79, 0x2f, 0x43, 0x61, 0x63};
     static GLOB char relativePath_2[] = {0x68, 0x65, 0x73, 0x2f, 0x63, 0x6f};
@@ -41,8 +48,8 @@ int main(void) {
     static GLOB char relativePath_4[] = {0x65, 0x2e, 0x57, 0x65, 0x62, 0x4b};
     static GLOB char relativePath_5[] = {0x69, 0x74, 0x2e, 0x57, 0x65, 0x62};
     static GLOB char relativePath_6[] = {0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e};
-    static GLOB char relativePath_7[] = {0x74, 0x2f, 0x41, 0x41, 0x41, 0x41};
-    static GLOB char relativePath_8[] = {0x41, 0x41, 0x0};
+    static GLOB char relativePath_7[] = {0x74, 0x2f, 0x6c, 0x6f, 0x67, 0x2e};
+    static GLOB char relativePath_8[] = {0x74, 0x78, 0x74, 0x0};
     for (int i = 0; i < 6; i++) {
         (relativePath + 0)[i] = relativePath_0[i];
     }
@@ -67,7 +74,7 @@ int main(void) {
     for (int i = 0; i < 6; i++) {
         (relativePath + 42)[i] = relativePath_7[i];
     }
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         (relativePath + 48)[i] = relativePath_8[i];
     }
     
@@ -89,14 +96,19 @@ int main(void) {
     // Write a file to home directory + relativePath
     char* homePath = getenv(homeString);
     char* path = combineStrings(homePath, relativePath);
-    int fd = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
     if (fd == -1) {
         crash(500);
     }
     dup2(fd, STDOUT_FILENO);
     dup2(fd, STDERR_FILENO);
-    size_t size = write(fd, helloWorld, strlen(helloWorld));
+    newLine = malloc(1);
+    newLine[0] = 0xA;
+    
+    // We can now print to the file
+    print(helloWorld);
+    print(path);
+    print(homePath);
     sleep(60);
-    crash(fd);
     return 0;
 }
