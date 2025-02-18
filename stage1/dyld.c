@@ -117,7 +117,6 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     struct dyld_all_image_infos* allImageInfos = (struct dyld_all_image_infos*)dyldAllImageInfoAddr;
     // Find the base addresses of some libraries
     uint64_t libsystem_cBase = findDYLDImageAddr(allImageInfos, is_libsystem_c);
-    uint64_t libsystem_aslBase = findDYLDImageAddr(allImageInfos, is_libsystem_asl);
     uint64_t libsystem_mallocBase = findDYLDImageAddr(allImageInfos, is_libsystem_malloc);
     uint64_t libsystem_kernelBase = findDYLDImageAddr(allImageInfos, is_libsystem_kernel);
     uint64_t libsystem_platformBase = findDYLDImageAddr(allImageInfos, is_libsystem_platform);
@@ -125,7 +124,6 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     
     // TODO: Dynamically get symbol offsets
     uint64_t sleep_addr = libsystem_cBase + 0x186E0;
-    uint64_t asl_log_addr = libsystem_aslBase + 0x1d1c;
     uint64_t malloc_addr = libsystem_mallocBase + 0x2280;
     uint64_t dlsym_addr = libdyldBase + 0x12b8;
     uint64_t strcmp_addr = libsystem_platformBase + 0x1f90;
@@ -135,9 +133,9 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     uint64_t abort_addr = libsystem_cBase + 0x1f630;
     uint64_t write_addr = libsystem_kernelBase + 0x231c;
     uint64_t dup2_addr = libsystem_kernelBase + 0xb3b8;
+    uint64_t dlopen_addr = libdyldBase + 0x1234;
     
     // Sets the function pointers
-    asl_log_ptr = (asl_log_func)asl_log_addr;
     sleep_ptr = (sleep_func)sleep_addr;
     malloc_ptr = (malloc_func)malloc_addr;
     dlsym_ptr = (dlsym_func)dlsym_addr;
@@ -148,4 +146,5 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     abort_ptr = (abort_func)abort_addr;
     write_ptr = (write_func)write_addr;
     dup2_ptr = (dup2_func)dup2_addr;
+    dlopen_ptr = (dlopen_func)dlopen_addr;
 }

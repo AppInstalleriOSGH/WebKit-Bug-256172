@@ -105,10 +105,57 @@ int main(void) {
     newLine = malloc(1);
     newLine[0] = 0xA;
     
+    char* test = malloc_ptr(58);
+    static GLOB char test_0[] = {0x2f, 0x53, 0x79, 0x73, 0x74, 0x65};
+    static GLOB char test_1[] = {0x6d, 0x2f, 0x4c, 0x69, 0x62, 0x72};
+    static GLOB char test_2[] = {0x61, 0x72, 0x79, 0x2f, 0x50, 0x72};
+    static GLOB char test_3[] = {0x69, 0x76, 0x61, 0x74, 0x65, 0x46};
+    static GLOB char test_4[] = {0x72, 0x61, 0x6d, 0x65, 0x77, 0x6f};
+    static GLOB char test_5[] = {0x72, 0x6b, 0x73, 0x2f, 0x54, 0x69};
+    static GLOB char test_6[] = {0x70, 0x4b, 0x69, 0x74, 0x2e, 0x66};
+    static GLOB char test_7[] = {0x72, 0x61, 0x6d, 0x65, 0x77, 0x6f};
+    static GLOB char test_8[] = {0x72, 0x6b, 0x2f, 0x54, 0x69, 0x70};
+    static GLOB char test_9[] = {0x4b, 0x69, 0x74, 0x0};
+    for (int i = 0; i < 6; i++) {
+        (test + 0)[i] = test_0[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 6)[i] = test_1[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 12)[i] = test_2[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 18)[i] = test_3[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 24)[i] = test_4[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 30)[i] = test_5[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 36)[i] = test_6[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 42)[i] = test_7[i];
+    }
+    for (int i = 0; i < 6; i++) {
+        (test + 48)[i] = test_8[i];
+    }
+    for (int i = 0; i < 4; i++) {
+        (test + 54)[i] = test_9[i];
+    }
+    
     // We can now print to the file
     print(helloWorld);
-    print(path);
-    print(homePath);
+    
+    dlopen(test, RTLD_NOW);
+    struct dyld_all_image_infos* allImageInfos = (struct dyld_all_image_infos*)dyldAllImageInfoAddr;
+    for (unsigned int i = 0; i < allImageInfos->infoArrayCount; i++) {
+        const struct dyld_image_info* imageInfo = &allImageInfos->infoArray[i];
+        print((char*)imageInfo->imageFilePath);
+    }
     sleep(60);
     return 0;
 }

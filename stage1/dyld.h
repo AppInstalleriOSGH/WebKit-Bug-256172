@@ -20,7 +20,6 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr);
 void crash(uint64_t value);
 void* getPrevFP(void);
 
-typedef int (*asl_log_func)(void*, void*, int, const char*, ...);
 typedef unsigned int (*sleep_func)(unsigned int);
 typedef void* (*malloc_func)(size_t);
 typedef void* (*dlsym_func)(void*, char*);
@@ -31,8 +30,8 @@ typedef char* (*getenv_func)(const char*);
 typedef void (*abort_func)(void);
 typedef size_t (*write_func)(int, const void*, size_t);
 typedef int (*dup2_func)(int, int);
+typedef void* (*dlopen_func)(const char*, int);
 
-asl_log_func asl_log_ptr;
 sleep_func sleep_ptr;
 malloc_func malloc_ptr;
 dlsym_func dlsym_ptr;
@@ -43,8 +42,8 @@ getenv_func getenv_ptr;
 abort_func abort_ptr;
 write_func write_ptr;
 dup2_func dup2_ptr;
+dlopen_func dlopen_ptr;
 
-#define asl_log(level, domain, format, ...) asl_log_ptr(level, domain, format, ##__VA_ARGS__)
 #define sleep(seconds) sleep_ptr(seconds)
 #define malloc(size) malloc_ptr(size)
 #define dlsym(handle, symbol) dlsym_ptr(handle, symbol)
@@ -55,3 +54,4 @@ dup2_func dup2_ptr;
 #define abort() abort_ptr()
 #define write(fd, buf, count) write_ptr(fd, buf, count)
 #define dup2(oldfd, newfd) dup2_ptr(oldfd, newfd)
+#define dlopen(path, mode) dlopen_ptr(path, mode)
