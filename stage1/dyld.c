@@ -114,6 +114,17 @@ uint64_t findDYLDImageAddr(struct dyld_all_image_infos* allImageInfos, int (*isI
 }
 
 __attribute__((section("__TEXT, __text")))
+uint64_t libsystem_cBase = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t libsystem_mallocBase = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t libsystem_kernelBase = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t libsystem_platformBase = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t libdyldBase = 0;
+
+__attribute__((section("__TEXT, __text")))
 uint64_t sleep_addr = 0;
 __attribute__((section("__TEXT, __text")))
 uint64_t malloc_addr = 0;
@@ -139,11 +150,11 @@ uint64_t dlopen_addr = 0;
 void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     struct dyld_all_image_infos* allImageInfos = (struct dyld_all_image_infos*)dyldAllImageInfoAddr;
     // Find the base addresses of some libraries
-    uint64_t libsystem_cBase = findDYLDImageAddr(allImageInfos, is_libsystem_c);
-    uint64_t libsystem_mallocBase = findDYLDImageAddr(allImageInfos, is_libsystem_malloc);
-    uint64_t libsystem_kernelBase = findDYLDImageAddr(allImageInfos, is_libsystem_kernel);
-    uint64_t libsystem_platformBase = findDYLDImageAddr(allImageInfos, is_libsystem_platform);
-    uint64_t libdyldBase = findDYLDImageAddr(allImageInfos, is__libdyld);
+    libsystem_cBase = findDYLDImageAddr(allImageInfos, is_libsystem_c);
+    libsystem_mallocBase = findDYLDImageAddr(allImageInfos, is_libsystem_malloc);
+    libsystem_kernelBase = findDYLDImageAddr(allImageInfos, is_libsystem_kernel);
+    libsystem_platformBase = findDYLDImageAddr(allImageInfos, is_libsystem_platform);
+    libdyldBase = findDYLDImageAddr(allImageInfos, is__libdyld);
     
     // TODO: Dynamically get symbol offsets
     sleep_addr = libsystem_cBase + 0x186E0;
@@ -157,17 +168,4 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     write_addr = libsystem_kernelBase + 0x231c;
     dup2_addr = libsystem_kernelBase + 0xb3b8;
     dlopen_addr = libdyldBase + 0x1234;
-    
-    // Sets the function pointers
-    //    sleep_ptr = (sleep_func)sleep_addr;
-    //    malloc_ptr = (malloc_func)malloc_addr;
-    //    dlsym_ptr = (dlsym_func)dlsym_addr;
-    //    strcmp_ptr = (strcmp_func)strcmp_addr;
-    //    strlen_ptr = (strlen_func)strlen_addr;
-    //    open_ptr = (open_func)open_addr;
-    //    getenv_ptr = (getenv_func)getenv_addr;
-    //    abort_ptr = (abort_func)abort_addr;
-    //    write_ptr = (write_func)write_addr;
-    //    dup2_ptr = (dup2_func)dup2_addr;
-    //    dlopen_ptr = (dlopen_func)dlopen_addr;
 }

@@ -32,6 +32,12 @@ typedef size_t (*write_func)(int, const void*, size_t);
 typedef int (*dup2_func)(int, int);
 typedef void* (*dlopen_func)(const char*, int);
 
+extern uint64_t libsystem_cBase;
+extern uint64_t libsystem_mallocBase;
+extern uint64_t libsystem_kernelBase;
+extern uint64_t libsystem_platformBase;
+extern uint64_t libdyldBase;
+
 extern uint64_t sleep_addr;
 extern uint64_t malloc_addr;
 extern uint64_t dlsym_addr;
