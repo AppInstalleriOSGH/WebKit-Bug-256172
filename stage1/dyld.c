@@ -113,6 +113,29 @@ uint64_t findDYLDImageAddr(struct dyld_all_image_infos* allImageInfos, int (*isI
     return 0;
 }
 
+__attribute__((section("__TEXT, __text")))
+uint64_t sleep_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t malloc_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t dlsym_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t strcmp_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t strlen_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t open_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t getenv_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t abort_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t write_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t dup2_addr = 0;
+__attribute__((section("__TEXT, __text")))
+uint64_t dlopen_addr = 0;
+
 void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     struct dyld_all_image_infos* allImageInfos = (struct dyld_all_image_infos*)dyldAllImageInfoAddr;
     // Find the base addresses of some libraries
@@ -123,28 +146,28 @@ void symbolsInit(uint64_t dyldAllImageInfoAddr) {
     uint64_t libdyldBase = findDYLDImageAddr(allImageInfos, is__libdyld);
     
     // TODO: Dynamically get symbol offsets
-    uint64_t sleep_addr = libsystem_cBase + 0x186E0;
-    uint64_t malloc_addr = libsystem_mallocBase + 0x2280;
-    uint64_t dlsym_addr = libdyldBase + 0x12b8;
-    uint64_t strcmp_addr = libsystem_platformBase + 0x1f90;
-    uint64_t strlen_addr = libsystem_platformBase + 0x1f20;
-    uint64_t open_addr = libsystem_kernelBase + 0x2530;
-    uint64_t getenv_addr = libsystem_cBase + 0x7b14;
-    uint64_t abort_addr = libsystem_cBase + 0x1f630;
-    uint64_t write_addr = libsystem_kernelBase + 0x231c;
-    uint64_t dup2_addr = libsystem_kernelBase + 0xb3b8;
-    uint64_t dlopen_addr = libdyldBase + 0x1234;
+    sleep_addr = libsystem_cBase + 0x186E0;
+    malloc_addr = libsystem_mallocBase + 0x2280;
+    dlsym_addr = libdyldBase + 0x12b8;
+    strcmp_addr = libsystem_platformBase + 0x1f90;
+    strlen_addr = libsystem_platformBase + 0x1f20;
+    open_addr = libsystem_kernelBase + 0x2530;
+    getenv_addr = libsystem_cBase + 0x7b14;
+    abort_addr = libsystem_cBase + 0x1f630;
+    write_addr = libsystem_kernelBase + 0x231c;
+    dup2_addr = libsystem_kernelBase + 0xb3b8;
+    dlopen_addr = libdyldBase + 0x1234;
     
     // Sets the function pointers
-    sleep_ptr = (sleep_func)sleep_addr;
-    malloc_ptr = (malloc_func)malloc_addr;
-    dlsym_ptr = (dlsym_func)dlsym_addr;
-    strcmp_ptr = (strcmp_func)strcmp_addr;
-    strlen_ptr = (strlen_func)strlen_addr;
-    open_ptr = (open_func)open_addr;
-    getenv_ptr = (getenv_func)getenv_addr;
-    abort_ptr = (abort_func)abort_addr;
-    write_ptr = (write_func)write_addr;
-    dup2_ptr = (dup2_func)dup2_addr;
-    dlopen_ptr = (dlopen_func)dlopen_addr;
+    //    sleep_ptr = (sleep_func)sleep_addr;
+    //    malloc_ptr = (malloc_func)malloc_addr;
+    //    dlsym_ptr = (dlsym_func)dlsym_addr;
+    //    strcmp_ptr = (strcmp_func)strcmp_addr;
+    //    strlen_ptr = (strlen_func)strlen_addr;
+    //    open_ptr = (open_func)open_addr;
+    //    getenv_ptr = (getenv_func)getenv_addr;
+    //    abort_ptr = (abort_func)abort_addr;
+    //    write_ptr = (write_func)write_addr;
+    //    dup2_ptr = (dup2_func)dup2_addr;
+    //    dlopen_ptr = (dlopen_func)dlopen_addr;
 }

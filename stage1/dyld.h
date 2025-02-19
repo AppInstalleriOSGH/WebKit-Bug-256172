@@ -32,26 +32,26 @@ typedef size_t (*write_func)(int, const void*, size_t);
 typedef int (*dup2_func)(int, int);
 typedef void* (*dlopen_func)(const char*, int);
 
-sleep_func sleep_ptr;
-malloc_func malloc_ptr;
-dlsym_func dlsym_ptr;
-strcmp_func strcmp_ptr;
-strlen_func strlen_ptr;
-open_func open_ptr;
-getenv_func getenv_ptr;
-abort_func abort_ptr;
-write_func write_ptr;
-dup2_func dup2_ptr;
-dlopen_func dlopen_ptr;
+extern uint64_t sleep_addr;
+extern uint64_t malloc_addr;
+extern uint64_t dlsym_addr;
+extern uint64_t strcmp_addr;
+extern uint64_t strlen_addr;
+extern uint64_t open_addr;
+extern uint64_t getenv_addr;
+extern uint64_t abort_addr;
+extern uint64_t write_addr;
+extern uint64_t dup2_addr;
+extern uint64_t dlopen_addr;
 
-#define sleep(seconds) sleep_ptr(seconds)
-#define malloc(size) malloc_ptr(size)
-#define dlsym(handle, symbol) dlsym_ptr(handle, symbol)
-#define strcmp(str1, str2) strcmp_ptr(str1, str2)
-#define strlen(str) strlen_ptr(str)
-#define open(filename, flags, ...) open_ptr(filename, flags, ##__VA_ARGS__)
-#define getenv(name) getenv_ptr(name)
-#define abort() abort_ptr()
-#define write(fd, buf, count) write_ptr(fd, buf, count)
-#define dup2(oldfd, newfd) dup2_ptr(oldfd, newfd)
-#define dlopen(path, mode) dlopen_ptr(path, mode)
+#define sleep(seconds) ((sleep_func)sleep_addr)(seconds)
+#define malloc(size) ((malloc_func)malloc_addr)(size)
+#define dlsym(handle, symbol) ((dlsym_func)dlsym_addr)(handle, symbol)
+#define strcmp(str1, str2) ((strcmp_func)strcmp_addr)(str1, str2)
+#define strlen(str) ((strlen_func)strlen_addr)(str)
+#define open(filename, flags, ...) ((open_func)open_addr)(filename, flags, ##__VA_ARGS__)
+#define getenv(name) ((getenv_func)getenv_addr)(name)
+#define abort() ((abort_func)abort_addr)()
+#define write(fd, buf, count) ((write_func)write_addr)(fd, buf, count)
+#define dup2(oldfd, newfd) ((dup2_func)dup2_addr)(oldfd, newfd)
+#define dlopen(path, mode) ((dlopen_func)dlopen_addr)(path, mode)

