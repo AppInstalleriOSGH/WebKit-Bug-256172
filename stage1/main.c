@@ -10,23 +10,13 @@ uint64_t* array = NULL;
 
 #define getString(offset) ((char*)array + 144 + offset)
 
-// Horrible string comparison functions
-// Check if string is "__all_image_info__DATA" or "__all_image_info__DATA_DIRTY"
-int is__all_image_info__DATA(char* s) {
-    return (s[0] == 95 && s[1] == 95 && s[2] == 97 && s[3] == 108 && s[4] == 108 && s[5] == 95 &&
-            s[6] == 105 && s[7] == 109 && s[8] == 97 && s[9] == 103 && s[10] == 101 && s[11] == 95 &&
-            s[12] == 105 && s[13] == 110 && s[14] == 102 && s[15] == 111 && s[16] == 95 && s[17] == 95 &&
-            s[18] == 68 && s[19] == 65 && s[20] == 84 && s[21] == 65 && s[22] == 0) || (s[0] == 95 && s[1] == 95 && s[2] == 97 && s[3] == 108 && s[4] == 108 && s[5] == 95 && s[6] == 105 && s[7] == 109 && s[8] == 97 && s[9] == 103 && s[10] == 101 && s[11] == 95 && s[12] == 105 && s[13] == 110 && s[14] == 102 && s[15] == 111 && s[16] == 95 && s[17] == 95 && s[18] == 68 && s[19] == 65 && s[20] == 84 && s[21] == 65 && s[22] == 95 && s[23] == 68 && s[24] == 73 && s[25] == 82 && s[26] == 84 && s[27] == 89 && s[28] == 0);
-}
-
-// Check if string is "__TEXT"
-int is__TEXT(char* s) {
-    return s[0] == 95 && s[1] == 95 && s[2] == 84 && s[3] == 69 && s[4] == 88 && s[5] == 84 && s[6] == 0;
-}
-
-// Check if string is "__DATA"
-int is__DATA(char* s) {
-    return s[0] == 95 && s[1] == 95 && s[2] == 68 && s[3] == 65 && s[4] == 84 && s[5] == 65 && s[6] == 0;
+int same_string(const char *s1, const char *s2) {
+    for (int i = 0; s1[i] == s2[i]; i++) {
+        if (s1[i] == '\0') {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 // Check if string is "/usr/lib/system/libsystem_platform.dylib"
@@ -97,11 +87,11 @@ uint64_t getDYLDAllImageInfoAddr(uint64_t dyldBase) {
         if (command->cmd == LC_SEGMENT_64) {
             struct segment_command_64* segment = (struct segment_command_64*)command;
             struct section_64* section = (struct section_64*)((uint8_t*)segment + sizeof(struct segment_command_64));
-            if (is__TEXT(section->segname) == 1) {
+            if (same_string(section->segname, getString(100)) == 1) {
                 slide = dyldBase - segment->vmaddr;
             }
             for (int j = 0; j < segment->nsects; j++) {
-                if (is__all_image_info__DATA(section->sectname) == 1) {
+                if (same_string(section->sectname, getString(125)) == 1 || same_string(section->sectname, getString(148)) == 1) {
                     return section->addr + slide;
                 }
                 section = (struct section_64*)((uint8_t*)section + sizeof(struct section_64));
@@ -122,7 +112,8 @@ uint64_t findDYLDImageAddr(struct dyld_all_image_infos* allImageInfos, int (*isI
     return 0;
 }
 
-int c_start(uint64_t* array) {
+int c_start(uint64_t* array_ptr) {
+    array = array_ptr;
     uint64_t dyldBase = getDYLDBase();
     uint64_t dyldAllImageInfoAddr = getDYLDAllImageInfoAddr(dyldBase);
     if (dyldAllImageInfoAddr == 0) {
