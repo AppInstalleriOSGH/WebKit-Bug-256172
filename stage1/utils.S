@@ -1,8 +1,12 @@
 .align 4
+.pool
+.set target, 0xbadbad10badbad10
 .global _start, _getPrevFP, _crash
 
 _start:
-    b _main
+    ldr x0, =target  // address of the JS object
+    ldr x0, [x0, 16] // set x0 to the address of the UInt8 array
+    b _c_start
     ret
 
 _getPrevFP:

