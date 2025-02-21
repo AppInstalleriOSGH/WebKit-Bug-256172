@@ -118,18 +118,18 @@ int c_start(uint64_t* array_ptr) {
     array[16] = findSymbol(array[4], getString(86)); // _dup2
     array[17] = findSymbol(array[6], getString(92)); // _dlopen
     
-    char* homePath = getenv(getString(118));
-    char* path = combineStrings(homePath, getString(123));
+    char* homePath = getenv(getString(396));
+    char* path = combineStrings(homePath, getString(401));
     int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
     if (fd == -1) {
         crash(500,500,500,500,500,500,500,500,500,500);
     }
     dup2(fd, STDOUT_FILENO);
     dup2(fd, STDERR_FILENO);
-    newLine = getString(175);
+    newLine = getString(453);
     
     print(path);
-    print(getString(177)); // log "Hello, world!" to log.txt
+    print(getString(455)); // log "Hello, world!" to log.txt
     
     sleep(10);
     crash(0,0,array[12],array[13],array[14],array[15],array[16],array[17],array[13],array[14]);

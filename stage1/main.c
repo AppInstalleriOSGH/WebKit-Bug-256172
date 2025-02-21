@@ -5,6 +5,11 @@
 #import <stdio.h>
 #import <dlfcn.h>
 
+__attribute__((section("__TEXT, __text")))
+uint64_t* array = NULL;
+
+#define getString(offset) ((char*)array + 144 + offset)
+
 // Horrible string comparison functions
 // Check if string is "__all_image_info__DATA" or "__all_image_info__DATA_DIRTY"
 int is__all_image_info__DATA(char* s) {

