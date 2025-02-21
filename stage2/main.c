@@ -11,6 +11,8 @@ void crash(uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3, uint64_t x4, uint
 
 __attribute__((section("__TEXT, __text")))
 uint64_t* array = NULL;
+__attribute__((section("__TEXT, __text")))
+char* newLine = NULL;
 
 #define getString(offset) ((char*)array + 144 + offset)
 
@@ -94,6 +96,13 @@ char* combineStrings(char* str1, char* str2) {
     return combined;
 }
 
+void print(char* message) {
+    write(STDOUT_FILENO, message, strlen(message));
+    if (newLine) {
+        write(STDOUT_FILENO, newLine, 1);
+    }
+}
+
 int c_start(uint64_t* array_ptr) {
     // Init symbols
     array = array_ptr;
@@ -115,9 +124,14 @@ int c_start(uint64_t* array_ptr) {
     if (fd == -1) {
         crash(500,500,500,500,500,500,500,500,500,500);
     }
+    dup2(fd, STDOUT_FILENO);
+    dup2(fd, STDERR_FILENO);
+    newLine = getString(175);
+    
+    print(path);
+    print(getString(177)); // log "Hello, world!" to log.txt
     
     sleep(10);
-    
     crash(0,0,array[12],array[13],array[14],array[15],array[16],array[17],array[13],array[14]);
     return 0;
 }

