@@ -8,6 +8,23 @@ js = 'var stage1 = new Uint8Array(['
 js += ','.join(map(str, payload))
 js += ']);\n'
 
+js += '''
+stage1.replace = function(oldVal, newVal) {
+    for (var idx = 0; idx < this.length; idx++) {
+        var found = true;
+        for (var j = idx; j < idx + 8; j++) {
+            if (this[j] != oldVal.byteAt(j - idx)) {
+                found = false;
+                break;
+            }
+        }
+        if (found)
+            break;
+    }
+    this.set(newVal.bytes(), idx);
+};
+'''
+
 with open('stage1.js', 'w') as f:
     f.write(js)
 

