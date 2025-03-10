@@ -142,6 +142,50 @@ void print(char* message) {
 
 #define ret (uint64_t)open_ptr
 
+void prepareBindings(uint64_t address) {
+    struct mach_header_64* header = (void*)address;
+    struct load_command* command = (struct load_command*)((uint8_t*)header + 32);
+    struct symtab_command* symtab = NULL;
+    uint64_t* bindings = NULL;
+    for(int i = 0; i < header->ncmds > 0; i++) {
+        if (command->cmd == LC_SEGMENT_64) {
+            struct segment_command_64* segment = (struct segment_command_64*)command;
+            struct section_64* section = (struct section_64*)((uint8_t*)segment + sizeof(struct segment_command_64));
+            for (int j = 0; j < segment->nsects; j++) {
+                if (section->flags == S_NON_LAZY_SYMBOL_POINTERS) {
+                    bindings = (uint64_t*)(address + section->offset);
+                }
+                section = (struct section_64*)((uint8_t*)section + sizeof(struct section_64));
+            }
+        } else if (command->cmd == LC_SYMTAB) {
+            symtab = (struct symtab_command*)command;
+        }
+        command = (struct load_command*)((void*)command + command->cmdsize);
+    }
+    struct nlist_64* sym_table = (struct nlist_64*)(address + symtab->symoff);
+    int index = 0;
+    for (int i = 0; i < symtab->nsyms; i++) {
+        if (sym_table[i].n_type != N_EXT) continue;
+        char* name = (char*)(address + symtab->stroff + sym_table[i].n_un.n_strx);
+        uint64_t addr = (uint64_t)dlsym_ptr(RTLD_DEFAULT, name + 1);
+        if (addr == 0) continue;
+        print(name);
+        bindings[index] = addr;
+        index++;
+    }
+}
+
+void printHex(uint64_t value) {
+    char hexStr[17];
+    int i;
+    for (i = 15; i >= 0; i--) {
+        hexStr[i] = "0123456789ABCDEF"[value & 0xF];
+        value >>= 4;
+    }
+    hexStr[16] = '\0';
+    print(hexStr);
+}
+
 int main(void) {
     // Init symbols
     uint64_t dyldBase = findDyldBase();
@@ -157,7 +201,7 @@ int main(void) {
     strlen_ptr = dlsym_ptr(RTLD_DEFAULT, "strlen");
     malloc_ptr = dlsym_ptr(RTLD_DEFAULT, "malloc");
 
-    sleep_ptr(2);
+    sleep_ptr(5);
     
     // Init logger
     char* homePath = getenv_ptr("HOME");
@@ -173,6 +217,27 @@ int main(void) {
     print("WE ARE WEBCONTENT!!");
     print("Hello, World!");
     
+    printHex((uint64_t)dup2_ptr);
+    printHex((uint64_t)write_ptr);
+
+    uint32_t* pc;
+    __asm__("adr %0, ." : "=r"(pc));
+    while (*pc != MH_MAGIC && *pc != MH_MAGIC_64) pc--;
+
+    prepareBindings((uint64_t)pc);
+    printHex((uint64_t)printf);
+    printHex((uint64_t)dup2);
+    printHex((uint64_t)write);
+    
+    if ((uint64_t)printf == (uint64_t)dlsym_ptr(RTLD_DEFAULT, "printf")) {
+        print("GOOD!");
+    } else {
+        print("BAD!");
+    }
+    
+    write(STDOUT_FILENO, "Hello!!", 7);
+    printf("wow");
+    dup2(222, STDOUT_FILENO);
     sleep_ptr(60);
     return 0;
 }
