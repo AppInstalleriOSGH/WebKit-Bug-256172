@@ -11,6 +11,7 @@
 #import <dlfcn.h>
 #import <stdlib.h>
 #import <stdbool.h>
+#import <fcntl.h>
 
 void crash(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
@@ -99,14 +100,79 @@ uint64_t findSymbol(uint64_t baseAddr, char* wanted_name) {
     return 0;
 }
 
-#define ret (uint64_t)allImageInfos
+typedef unsigned int (*sleep_func)(unsigned int);
+typedef void* (*malloc_func)(size_t);
+typedef void* (*dlsym_func)(void*, char*);
+typedef int (*strcmp_func)(char*, char*);
+typedef size_t (*strlen_func)(char*);
+typedef int (*open_func)(const char*, int, ...);
+typedef char* (*getenv_func)(const char*);
+typedef void (*abort_func)(void);
+typedef size_t (*write_func)(int, const void*, size_t);
+typedef int (*dup2_func)(int, int);
+typedef void* (*dlopen_func)(const char*, int);
+
+dlsym_func dlsym_ptr;
+open_func open_ptr;
+write_func write_ptr;
+dup2_func dup2_ptr;
+sleep_func sleep_ptr;
+getenv_func getenv_ptr;
+strlen_func strlen_ptr;
+malloc_func malloc_ptr;
+
+char* combineStrings(char* str1, char* str2) {
+    size_t len1 = strlen_ptr(str1);
+    size_t len2 = strlen_ptr(str2);
+    char* combined = malloc_ptr(len1 + len2 + 1);
+    for (int i = 0; i < len1; i++) {
+        combined[i] = str1[i];
+    }
+    for (int i = 0; i < len2; i++) {
+        combined[i + len1] = str2[i];
+    }
+    combined[len1 + len2] = 0;
+    return combined;
+}
+
+void print(char* message) {
+    write_ptr(STDOUT_FILENO, message, strlen_ptr(message));
+    write_ptr(STDOUT_FILENO, "\n", 1);
+}
+
+#define ret (uint64_t)open_ptr
 
 int main(void) {
+    // Init symbols
     uint64_t dyldBase = findDyldBase();
     struct dyld_all_image_infos* allImageInfos = findDyldAllImageInfos(dyldBase);
     uint64_t libdyldBase = findDyldImageAddr(allImageInfos, "/usr/lib/system/libdyld.dylib");
     uint64_t dlsymAddr = findSymbol(libdyldBase, "_dlsym");
-    //uint64_t dlsymAddr = 200;
-    crash(ret,dlsymAddr,ret,dlsymAddr,ret,dlsymAddr,ret,dlsymAddr);
-    return 22;
+    dlsym_ptr = (void*)dlsymAddr;
+    open_ptr = dlsym_ptr(RTLD_DEFAULT, "open");
+    write_ptr = dlsym_ptr(RTLD_DEFAULT, "write");
+    dup2_ptr = dlsym_ptr(RTLD_DEFAULT, "dup2");
+    sleep_ptr = dlsym_ptr(RTLD_DEFAULT, "sleep");
+    getenv_ptr = dlsym_ptr(RTLD_DEFAULT, "getenv");
+    strlen_ptr = dlsym_ptr(RTLD_DEFAULT, "strlen");
+    malloc_ptr = dlsym_ptr(RTLD_DEFAULT, "malloc");
+
+    sleep_ptr(2);
+    
+    // Init logger
+    char* homePath = getenv_ptr("HOME");
+    char* path = combineStrings(homePath, "/Library/Caches/com.apple.WebKit.WebContent/log.txt");
+    int fd = open_ptr(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1) {
+        crash(500,500,500,500,500,500,500,500);
+    }
+    dup2_ptr(fd, STDOUT_FILENO);
+    dup2_ptr(fd, STDERR_FILENO);
+    
+    print("Running via custom Mach-O loader");
+    print("WE ARE WEBCONTENT!!");
+    print("Hello, World!");
+    
+    sleep_ptr(60);
+    return 0;
 }
