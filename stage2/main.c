@@ -1,25 +1,69 @@
 #import <mach-o/loader.h>
+#import <mach-o/dyld.h>
+#import <mach-o/dyld_images.h>
+#import <mach-o/nlist.h>
+#import <mach-o/loader.h>
 #import <mach-o/nlist.h>
 #import <mach-o/dyld.h>
 #import <mach-o/dyld_images.h>
 #import <mach/mach.h>
 #import <stdio.h>
 #import <dlfcn.h>
-#import <fcntl.h>
+#import <stdlib.h>
+#import <stdbool.h>
 
-void crash(uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3, uint64_t x4, uint64_t x5, uint64_t x6, uint64_t x7, uint64_t x8, uint64_t x9);
+void crash(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
-__attribute__((section("__TEXT, __text")))
-uint64_t* array = NULL;
-__attribute__((section("__TEXT, __text")))
-char* newLine = NULL;
+int my_strcmp(const char *s1, const char *s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return (unsigned char)*s1 - (unsigned char)*s2;
+}
 
-#define getString(offset) ((char*)array + 144 + offset)
+struct arm64_frame {
+    struct arm64_frame* previousFrame;
+    uint64_t lr;
+};
 
-int same_string(const char *s1, const char *s2) {
-    for (int i = 0; s1[i] == s2[i]; i++) {
-        if (s1[i] == '\0') {
-            return 1;
+uint64_t findDyldBase(void) {
+    struct arm64_frame* frame;
+    asm("mov %0, fp" : "=r"(frame));
+    while (frame->previousFrame->previousFrame != NULL) frame = frame->previousFrame;
+    uint32_t* magicPtr = (uint32_t*)frame->lr;
+    while (*magicPtr != 0xfeedface && *magicPtr != 0xfeedfacf) magicPtr -= 1;
+    return (uint64_t)magicPtr;
+}
+
+struct dyld_all_image_infos* findDyldAllImageInfos(uint64_t dyldBase) {
+    struct mach_header_64* header = (struct mach_header_64*)dyldBase;
+    struct load_command* command = (struct load_command*)((uint8_t*)header + 32);
+    uint64_t slide = 0;
+    for(int i = 0; i < header->ncmds > 0; i++) {
+        if (command->cmd == LC_SEGMENT_64) {
+            struct segment_command_64* segment = (struct segment_command_64*)command;
+            struct section_64* section = (struct section_64*)((uint8_t*)segment + sizeof(struct segment_command_64));
+            if (my_strcmp(segment->segname, "__TEXT") == 0) {
+                slide = dyldBase - segment->vmaddr;
+            }
+            for (int j = 0; j < segment->nsects; j++) {
+                if (my_strcmp(section->sectname, "__all_image_info__DATA") == 0 || my_strcmp(section->sectname, "__all_image_info__DATA_DIRTY") == 0) {
+                    return (struct dyld_all_image_infos*)(section->addr + slide);
+                }
+                section = (struct section_64*)((uint8_t*)section + sizeof(struct section_64));
+            }
+        }
+        command = (struct load_command *)((void *)command + command->cmdsize);
+    }
+    return NULL;
+}
+
+uint64_t findDyldImageAddr(struct dyld_all_image_infos* allImageInfos, char* name) {
+    for (unsigned int i = 0; i < allImageInfos->infoArrayCount; i++) {
+        const struct dyld_image_info* imageInfo = &allImageInfos->infoArray[i];
+        if (my_strcmp(imageInfo->imageFilePath, name) == 0) {
+            return (uint64_t)imageInfo->imageLoadAddress;
         }
     }
     return 0;
@@ -34,9 +78,9 @@ uint64_t findSymbol(uint64_t baseAddr, char* wanted_name) {
     for(int i = 0; i < header->ncmds > 0; i++) {
         if (command->cmd == LC_SEGMENT_64) {
             struct segment_command_64* segment = (struct segment_command_64*)command;
-            if (same_string(segment->segname, getString(100)) == 1) {
+            if (my_strcmp(segment->segname, "__TEXT") == 0) {
                 slide = baseAddr - segment->vmaddr;
-            } else if (same_string(segment->segname, getString(107)) == 1) {
+            } else if (my_strcmp(segment->segname, "__LINKEDIT") == 0) {
                 linkedit = (struct segment_command_64*)command;
             }
         } else if (command->cmd == LC_SYMTAB) {
@@ -44,98 +88,25 @@ uint64_t findSymbol(uint64_t baseAddr, char* wanted_name) {
         }
         command = (struct load_command*)((void*)command + command->cmdsize);
     }
-    if (!linkedit || !symtab || slide == 0) {
-        return 11;
-    }
+    if (!linkedit || !symtab || slide == 0) return 0;
     char* sym_str_table = (char*)linkedit->vmaddr - linkedit->fileoff + slide + symtab->stroff;
     struct nlist_64* sym_table = (struct nlist_64*)(linkedit->vmaddr - linkedit->fileoff + slide + symtab->symoff);
-    
     for (int i = 0; i < symtab->nsyms; i++) {
-        if (sym_table[i].n_value && same_string(wanted_name, &sym_str_table[sym_table[i].n_un.n_strx]) == 1) {
+        if (sym_table[i].n_value && my_strcmp(wanted_name, &sym_str_table[sym_table[i].n_un.n_strx]) == 0) {
             return (uint64_t)(sym_table[i].n_value + slide);
         }
     }
-    return 22;
-}
-
-typedef unsigned int (*sleep_func)(unsigned int);
-typedef void* (*malloc_func)(size_t);
-typedef void* (*dlsym_func)(void*, char*);
-typedef int (*strcmp_func)(char*, char*);
-typedef size_t (*strlen_func)(char*);
-typedef int (*open_func)(const char*, int, ...);
-typedef char* (*getenv_func)(const char*);
-typedef void (*abort_func)(void);
-typedef size_t (*write_func)(int, const void*, size_t);
-typedef int (*dup2_func)(int, int);
-typedef void* (*dlopen_func)(const char*, int);
-
-#define sleep(seconds) ((sleep_func)array[7])(seconds)
-#define malloc(size) ((malloc_func)array[8])(size)
-#define dlsym(handle, symbol) ((dlsym_func)array[9])(handle, symbol)
-#define strcmp(str1, str2) ((strcmp_func)array[10])(str1, str2)
-#define strlen(str) ((strlen_func)array[11])(str)
-#define open(filename, flags, ...) ((open_func)array[12])(filename, flags, ##__VA_ARGS__)
-#define getenv(name) ((getenv_func)array[13])(name)
-#define abort() ((abort_func)array[14])()
-#define write(fd, buf, count) ((write_func)array[15])(fd, buf, count)
-#define dup2(oldfd, newfd) ((dup2_func)array[16])(oldfd, newfd)
-#define dlopen(path, mode) ((dlopen_func)array[17])(path, mode)
-
-char* combineStrings(char* str1, char* str2) {
-    size_t len1 = strlen(str1);
-    size_t len2 = strlen(str2);
-    char* combined = malloc(len1 + len2 + 1);
-    for (int i = 0; i < len1; i++) {
-        combined[i] = str1[i];
-    }
-    for (int i = 0; i < len2; i++) {
-        combined[i + len1] = str2[i];
-    }
-    combined[len1 + len2] = 0;
-    return combined;
-}
-
-void print(char* message) {
-    write(STDOUT_FILENO, message, strlen(message));
-    if (newLine) {
-        write(STDOUT_FILENO, newLine, 1);
-    }
-}
-
-int c_start(uint64_t* array_ptr) {
-    // Init symbols
-    array = array_ptr;
-    array[7] = findSymbol(array[2], getString(0));   // _sleep
-    array[8] = findSymbol(array[3], getString(7));   // _malloc
-    array[9] = findSymbol(array[6], getString(15));  // _dlsym
-    array[10] = findSymbol(array[5], getString(22)); // __platform_strcmp
-    array[11] = findSymbol(array[5], getString(40)); // __platform_strlen
-    array[12] = findSymbol(array[4], getString(58)); // _open
-    array[13] = findSymbol(array[2], getString(64)); // _getenv
-    array[14] = findSymbol(array[2], getString(72)); // _abort
-    array[15] = findSymbol(array[4], getString(79)); // _write
-    array[16] = findSymbol(array[4], getString(86)); // _dup2
-    array[17] = findSymbol(array[6], getString(92)); // _dlopen
-    
-    char* homePath = getenv(getString(396));
-    char* path = combineStrings(homePath, getString(401));
-    int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
-    if (fd == -1) {
-        crash(500,500,500,500,500,500,500,500,500,500);
-    }
-    dup2(fd, STDOUT_FILENO);
-    dup2(fd, STDERR_FILENO);
-    newLine = getString(453);
-    
-    print(path);
-    print(getString(455)); // log "Hello, world!" to log.txt
-    
-    void* dlsym_open = dlsym(RTLD_DEFAULT, getString(59)); // getString(59) = "open"
-    void* dlsym_sleep = dlsym(RTLD_DEFAULT, getString(1)); // getString(1) = "sleep"
-    void* dlsym_malloc = dlsym(RTLD_DEFAULT, getString(8)); // getString(8) = "malloc"
-    
-    sleep(10);
-    crash(0,0,(uint64_t)dlsym_open,(uint64_t)dlsym_sleep,(uint64_t)dlsym_malloc,0,0,0,0,0);
     return 0;
+}
+
+#define ret (uint64_t)allImageInfos
+
+int main(void) {
+    uint64_t dyldBase = findDyldBase();
+    struct dyld_all_image_infos* allImageInfos = findDyldAllImageInfos(dyldBase);
+    uint64_t libdyldBase = findDyldImageAddr(allImageInfos, "/usr/lib/system/libdyld.dylib");
+    uint64_t dlsymAddr = findSymbol(libdyldBase, "_dlsym");
+    //uint64_t dlsymAddr = 200;
+    crash(ret,dlsymAddr,ret,dlsymAddr,ret,dlsymAddr,ret,dlsymAddr);
+    return 22;
 }

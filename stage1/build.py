@@ -3,9 +3,14 @@
 import subprocess
 
 payload = open('stage1.bin', 'rb').read()
+payload2 = open('../stage2/stage2', 'rb').read()
 
 js = 'var stage1 = new Uint8Array(['
 js += ','.join(map(str, payload))
+js += ']);\n'
+
+js += 'var stage2 = new Uint8Array(['
+js += ','.join(map(str, payload2))
 js += ']);\n'
 
 js += '''

