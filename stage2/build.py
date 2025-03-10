@@ -2,15 +2,14 @@
 
 import subprocess
 
-payload = open('stage1.bin', 'rb').read()
-payload2 = open('../stage2/stage2', 'rb').read()
+payload = open('stage2', 'rb').read()
 
-js = 'var stage1 = new Uint8Array(['
+js = 'var stage2 = new Uint8Array(['
 js += ','.join(map(str, payload))
 js += ']);\n'
 
 js += '''
-stage1.replace = function(oldVal, newVal) {
+stage2.replace = function(oldVal, newVal) {
     for (var idx = 0; idx < this.length; idx++) {
         var found = true;
         for (var j = idx; j < idx + 8; j++) {
@@ -26,11 +25,11 @@ stage1.replace = function(oldVal, newVal) {
 };
 '''
 
-with open('stage1.js', 'w') as f:
+with open('stage2.js', 'w') as f:
     f.write(js)
 
 EXPORTS = [
-        {'path': 'stage1.js', 'content_type': 'text/javascript; charset=UTF-8'}
+        {'path': 'stage2.js', 'content_type': 'text/javascript; charset=UTF-8'}
 ]
 
-subprocess.run(['cp', 'stage1.js', '..'], check=True)
+subprocess.run(['cp', 'stage2.js', '..'], check=True)
