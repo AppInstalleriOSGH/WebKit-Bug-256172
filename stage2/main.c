@@ -202,7 +202,7 @@ int main(void) {
     malloc_ptr = dlsym_ptr(RTLD_DEFAULT, "malloc");
 
     sleep_ptr(5);
-    
+
     // Init logger
     char* homePath = getenv_ptr("HOME");
     char* path = combineStrings(homePath, "/Library/Caches/com.apple.WebKit.WebContent/log.txt");
@@ -235,9 +235,8 @@ int main(void) {
         print("BAD!");
     }
     
-    write(STDOUT_FILENO, "Hello!!", 7);
-    printf("wow");
-    dup2(222, STDOUT_FILENO);
-    sleep_ptr(60);
+    write(STDOUT_FILENO, "Hello!!\n", 8);
+    printHex(mach_task_self_);
+    sleep(60);
     return 0;
 }
