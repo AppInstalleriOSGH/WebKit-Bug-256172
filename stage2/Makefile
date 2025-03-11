@@ -3,7 +3,7 @@ SCFLAGS = -arch arm64 -Wall -Wno-error=incompatible-function-pointer-types -Wno-
 all: clean
 	@xcrun -sdk iphoneos clang main.c -o main.o $(SCFLAGS)
 	@xcrun -sdk iphoneos clang utils.S -o utils.o $(SCFLAGS)
-	@xcrun -sdk iphoneos ld main.o utils.o -o stage2 -lSystem -syslibroot $(shell xcrun --sdk iphoneos --show-sdk-path)
+	@xcrun -sdk iphoneos ld main.o utils.o -o stage2 -lSystem -lobjc -syslibroot $(shell xcrun --sdk iphoneos --show-sdk-path)
 	@rm -f *.o
 	@python3 build.py
 	

