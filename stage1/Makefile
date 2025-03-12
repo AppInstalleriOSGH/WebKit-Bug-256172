@@ -9,4 +9,4 @@ all: clean
 	@python3 build.py
 	
 clean:
-	@rm -f stage1 stage1.js ../stage1.js *.o
+	@rm -f stage1 ../stage1.js *.o
