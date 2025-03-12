@@ -136,15 +136,17 @@ void print(char* message) {
     write_ptr(STDOUT_FILENO, "\n", 1);
 }
 
-void printHex(uint64_t value) {
-    char hexStr[17];
-    int i;
-    for (i = 15; i >= 0; i--) {
-        hexStr[i] = "0123456789ABCDEF"[value & 0xF];
+void printHex(char* message, uint64_t value) {
+    char hexStr[19];
+    int i = 18;
+    hexStr[i--] = '\0';
+    while (value > 0) {
+        hexStr[i--] = "0123456789ABCDEF"[value & 0xF];
         value >>= 4;
     }
-    hexStr[16] = '\0';
-    print(hexStr);
+    hexStr[i--] = 'x';
+    hexStr[i] = '0';
+    print(combineStrings(message, hexStr + i));
 }
 
 void prepareBindings(uint64_t address) {
