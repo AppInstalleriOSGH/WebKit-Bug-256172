@@ -2,8 +2,7 @@
 
 import subprocess
 
-payload = open('stage1.bin', 'rb').read()
-payload2 = open('../stage2/stage2', 'rb').read()
+payload = open('stage1', 'rb').read()
 
 js = 'var stage1 = new Uint8Array(['
 js += ','.join(map(str, payload))
