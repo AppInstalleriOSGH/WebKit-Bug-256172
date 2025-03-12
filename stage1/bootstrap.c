@@ -9,8 +9,6 @@
 #import <stdbool.h>
 #import <fcntl.h>
 
-void crash(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
-
 int my_strcmp(const char *s1, const char *s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
@@ -190,7 +188,7 @@ void prepareBindings(uint64_t address) {
     }
 }
 
-void initializeSymbols(void) {
+void bootstrap(void) {
     uint64_t dyldBase = findDyldBase();
     struct dyld_all_image_infos* allImageInfos = findDyldAllImageInfos(dyldBase);
     uint64_t libdyldBase = findDyldImageAddr(allImageInfos, "/usr/lib/system/libdyld.dylib");
@@ -207,9 +205,6 @@ void initializeSymbols(void) {
     char* homePath = getenv_ptr("HOME");
     char* path = combineStrings(homePath, "/Library/Caches/com.apple.WebKit.WebContent/log.txt");
     int fd = open_ptr(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
-    if (fd == -1) {
-        crash(500,500,500,500,500,500,500,500);
-    }
     dup2_ptr(fd, STDOUT_FILENO);
     dup2_ptr(fd, STDERR_FILENO);
     my_puts("Running via custom Mach-O loader!");

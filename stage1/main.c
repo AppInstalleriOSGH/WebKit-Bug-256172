@@ -4,12 +4,11 @@
 #import <mach/mach.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
-#import <stdarg.h>
 
-void initializeSymbols(void);
+void bootstrap(void);
 
 int main(void) {
-    initializeSymbols();
+    bootstrap();
     
     // printf
     printf("mach task self: 0x%x\n", mach_task_self_);
@@ -21,6 +20,8 @@ int main(void) {
     
     // puts
     printf("Hello, world!\n");
+    
+    printf("HOME: %s\n", getenv("HOME"));
     
     sleep(60);
     return 0;
