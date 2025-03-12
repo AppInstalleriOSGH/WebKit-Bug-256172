@@ -9,12 +9,64 @@
 #import <stdbool.h>
 #import <fcntl.h>
 
+typedef unsigned int (*sleep_func)(unsigned int);
+typedef void* (*malloc_func)(size_t);
+typedef void* (*dlsym_func)(void*, char*);
+typedef int (*strcmp_func)(char*, char*);
+typedef size_t (*strlen_func)(char*);
+typedef int (*open_func)(const char*, int, ...);
+typedef char* (*getenv_func)(const char*);
+typedef void (*abort_func)(void);
+typedef size_t (*write_func)(int, const void*, size_t);
+typedef int (*dup2_func)(int, int);
+typedef void* (*dlopen_func)(const char*, int);
+
+dlsym_func dlsym_ptr;
+open_func open_ptr;
+write_func write_ptr;
+dup2_func dup2_ptr;
+sleep_func sleep_ptr;
+getenv_func getenv_ptr;
+strlen_func strlen_ptr;
+malloc_func malloc_ptr;
+
 int my_strcmp(const char *s1, const char *s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
         s2++;
     }
     return (unsigned char)*s1 - (unsigned char)*s2;
+}
+
+char* combineStrings(char* str1, char* str2) {
+    size_t len1 = strlen_ptr(str1);
+    size_t len2 = strlen_ptr(str2);
+    char* combined = malloc_ptr(len1 + len2 + 1);
+    for (int i = 0; i < len1; i++) {
+        combined[i] = str1[i];
+    }
+    for (int i = 0; i < len2; i++) {
+        combined[i + len1] = str2[i];
+    }
+    combined[len1 + len2] = 0;
+    return combined;
+}
+
+void my_puts(char* message) {
+    write_ptr(STDOUT_FILENO, message, strlen_ptr(message));
+    write_ptr(STDOUT_FILENO, "\n", 1);
+}
+
+// only call printf after calling bootstrap()
+void my_printf(const char* format, ...) {
+    size_t size = strlen(format) + 1000;
+    char* buffer = malloc(size);
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, size, format, args);
+    va_end(args);
+    write(STDOUT_FILENO, buffer, strlen(buffer));
+    free(buffer);
 }
 
 struct arm64_frame {
@@ -94,56 +146,6 @@ uint64_t findSymbol(uint64_t baseAddr, char* wanted_name) {
     return 0;
 }
 
-typedef unsigned int (*sleep_func)(unsigned int);
-typedef void* (*malloc_func)(size_t);
-typedef void* (*dlsym_func)(void*, char*);
-typedef int (*strcmp_func)(char*, char*);
-typedef size_t (*strlen_func)(char*);
-typedef int (*open_func)(const char*, int, ...);
-typedef char* (*getenv_func)(const char*);
-typedef void (*abort_func)(void);
-typedef size_t (*write_func)(int, const void*, size_t);
-typedef int (*dup2_func)(int, int);
-typedef void* (*dlopen_func)(const char*, int);
-
-dlsym_func dlsym_ptr;
-open_func open_ptr;
-write_func write_ptr;
-dup2_func dup2_ptr;
-sleep_func sleep_ptr;
-getenv_func getenv_ptr;
-strlen_func strlen_ptr;
-malloc_func malloc_ptr;
-
-char* combineStrings(char* str1, char* str2) {
-    size_t len1 = strlen_ptr(str1);
-    size_t len2 = strlen_ptr(str2);
-    char* combined = malloc_ptr(len1 + len2 + 1);
-    for (int i = 0; i < len1; i++) {
-        combined[i] = str1[i];
-    }
-    for (int i = 0; i < len2; i++) {
-        combined[i + len1] = str2[i];
-    }
-    combined[len1 + len2] = 0;
-    return combined;
-}
-
-void my_puts(char* message) {
-    write_ptr(STDOUT_FILENO, message, strlen_ptr(message));
-    write_ptr(STDOUT_FILENO, "\n", 1);
-}
-
-void my_printf(const char* format, ...) {
-    size_t size = strlen(format) + 1000;
-    char* buffer = malloc(size);
-    va_list args;
-    va_start(args, format);
-    vsnprintf(buffer, size, format, args);
-    va_end(args);
-    write_ptr(STDOUT_FILENO, buffer, strlen_ptr(buffer));
-}
-
 uint64_t resolveSymbol(char* name) {
     // printf and puts don't work so use custom ones
     if (my_strcmp(name, "_printf") == 0) return (uint64_t)my_printf;
@@ -182,7 +184,7 @@ void prepareBindings(uint64_t address) {
             my_puts("Can't find symbol, skipping.");
             continue;
         }
-        my_puts(name);
+        //my_puts(name);
         bindings[index] = addr;
         index++;
     }
