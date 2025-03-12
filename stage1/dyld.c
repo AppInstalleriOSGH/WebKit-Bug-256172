@@ -131,22 +131,26 @@ char* combineStrings(char* str1, char* str2) {
     return combined;
 }
 
-void print(char* message) {
+void my_puts(char* message) {
     write_ptr(STDOUT_FILENO, message, strlen_ptr(message));
     write_ptr(STDOUT_FILENO, "\n", 1);
 }
 
-void printHex(char* message, uint64_t value) {
-    char hexStr[19];
-    int i = 18;
-    hexStr[i--] = '\0';
-    while (value > 0) {
-        hexStr[i--] = "0123456789ABCDEF"[value & 0xF];
-        value >>= 4;
-    }
-    hexStr[i--] = 'x';
-    hexStr[i] = '0';
-    print(combineStrings(message, hexStr + i));
+void my_printf(const char* format, ...) {
+    size_t size = strlen(format) + 1000;
+    char* buffer = malloc(size);
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, size, format, args);
+    va_end(args);
+    write_ptr(STDOUT_FILENO, buffer, strlen_ptr(buffer));
+}
+
+uint64_t resolveSymbol(char* name) {
+    // printf and puts don't work so use custom ones
+    if (my_strcmp(name, "_printf") == 0) return (uint64_t)my_printf;
+    if (my_strcmp(name, "_puts") == 0) return (uint64_t)my_puts;
+    return (uint64_t)dlsym_ptr(RTLD_DEFAULT, name + 1);
 }
 
 void prepareBindings(uint64_t address) {
@@ -174,13 +178,13 @@ void prepareBindings(uint64_t address) {
     for (int i = 0; i < symtab->nsyms; i++) {
         if (sym_table[i].n_type != N_EXT) continue;
         char* name = (char*)(address + symtab->stroff + sym_table[i].n_un.n_strx);
-        uint64_t addr = (uint64_t)dlsym_ptr(RTLD_DEFAULT, name + 1);
+        uint64_t addr = resolveSymbol(name);
         if (addr == 0) {
-            print(name);
-            print("Can't find symbol, skipping.");
+            my_puts(name);
+            my_puts("Can't find symbol, skipping.");
             continue;
         }
-        print(name);
+        my_puts(name);
         bindings[index] = addr;
         index++;
     }
@@ -208,10 +212,10 @@ void initializeSymbols(void) {
     }
     dup2_ptr(fd, STDOUT_FILENO);
     dup2_ptr(fd, STDERR_FILENO);
-    print("Running via custom Mach-O loader!");
+    my_puts("Running via custom Mach-O loader!");
     uint32_t* pc;
     __asm__("adr %0, ." : "=r"(pc));
     while (*pc != MH_MAGIC && *pc != MH_MAGIC_64) pc--;
     prepareBindings((uint64_t)pc);
-    print("Initialized symbols!");
+    my_puts("Initialized symbols!");
 }

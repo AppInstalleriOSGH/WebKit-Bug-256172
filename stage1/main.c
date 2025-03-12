@@ -4,24 +4,23 @@
 #import <mach/mach.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
+#import <stdarg.h>
 
 void initializeSymbols(void);
-void print(char* message);
-void printHex(char* message, uint64_t value);
-char* combineStrings(char* str1, char* str2);
 
 int main(void) {
     initializeSymbols();
     
-    write(STDOUT_FILENO, "Hello!!\n", 8);
-    printHex("mach task self: ", mach_task_self_);
-    printHex("dlsym: ", (uint64_t)dlsym);
-    printHex("printf: ", (uint64_t)printf);
+    // printf
+    printf("mach task self: 0x%x\n", mach_task_self_);
+    printf("dlsym: %p\n", dlsym);
+    printf("printf: %p\n", printf);
+    printf("objc_getClass: %p\n", objc_getClass);
+    printf("sel_registerName: %p\n", sel_registerName);
+    printf("objc_msgSend: %p\n", objc_msgSend);
     
-    printHex("objc_getClass: ", (uint64_t)objc_getClass);
-    printHex("sel_registerName: ", (uint64_t)sel_registerName);
-    printHex("objc_msgSend: ", (uint64_t)objc_msgSend);
-    
+    // puts
+    printf("Hello, world!\n");
     
     sleep(60);
     return 0;
