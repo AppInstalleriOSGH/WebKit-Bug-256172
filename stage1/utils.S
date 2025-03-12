@@ -1,5 +1,4 @@
-.align 4
-.global _start, _crash
+.global _crash
 
 _crash:
     mov x12, x0
