@@ -430,6 +430,8 @@ function pwn() {
     stdoutLog("Hello, World!");
     stdoutLog(`[+] HOME: ${getenv("HOME")}`);
     
+    stdoutLog(`[+] pid: ${arbCall("getpid")}`);
+    
     // sleep test
-    // arbCall("sleep", 5);
+    arbCall("sleep", 5);
 }
