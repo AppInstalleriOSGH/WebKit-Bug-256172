@@ -305,7 +305,7 @@ function pwn() {
         }
         arbCallContext.fill(0n);
         arbCallContext[0] = BigInt(func);
-        for (let x = 0; i < args.length; x++) {
+        for (let x = 0; x < args.length; x++) {
             let arg = args[x];
             let value;
             switch (typeof arg) {
